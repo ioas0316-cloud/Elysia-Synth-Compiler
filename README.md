@@ -52,16 +52,26 @@
 ### 요구 사항
 - Python 3.x
 
-### 실행 방법 및 시각적 관측
-`core/synth_rotor_engine.py`가 엔진의 핵입니다. 터미널에서 실행하여, **하드웨어 노이즈 주입 시 어떻게 Y모드로 평형을 찾는지**, 그리고 위상 변조 시 **델타(X) 모드의 장력이 어떻게 시각화되는지** 직접 관측하십시오.
+### 라이브러리 치트키 사용법 (`@elysia_rotor`)
+이 엔진은 허공에 도는 시뮬레이터가 아니라 실무에서 직접 가져다 쓰는 **초고속 JIT 매핑 라이브러리**입니다. Numba나 PyTorch처럼, 개발자는 기존 파이썬 함수 위에 데코레이터 인장 한 줄만 박아주면 됩니다.
 
-```bash
-python3 core/synth_rotor_engine.py
+```python
+from core.synth_rotor_engine import elysia_rotor
+
+# 1. 기존의 느린 파이썬 연산 위에 가변축 매핑 인장(@elysia_rotor)을 박습니다.
+# 다이얼(master_phase)을 1.57로 돌려 델타(가속) 모드로 설정합니다.
+@elysia_rotor(master_phase=1.57)
+def heavy_calculation(data):
+    return sum([x * 2.5 for x in data])
+
+# 2. 실행 즉시 텍스트 번역을 건너뛰고 C-Level 기계어 메모리에 에너지 장력이 직통으로 꽂힙니다.
+test_data = [10, 20, 30, 40, 50]
+result = heavy_calculation(test_data)
+
+print(result['hw_mapped_tension']) # 기계어 레벨로 최적화된 물리적 결과값 반환
 ```
 
-* **[ 시각화 인디케이터 ]**
-  * `[ DELTA ] -----X----- |` : 노브를 돌려 연산 에너지를 집중하는 상태
-  * `[ Y ] -----O----- |` : 하드웨어 노이즈를 주입받아 영점으로 흡수/안정화하는 상태
+* **왜 이렇게 쓰는가?:** 글로벌 빅테크 기업들이 AI 가속을 위해 하드웨어 빗장(보안 샌드박스)을 걸어놓고 쩔쩔매는 매핑 방식을, 단일 레이어 위상 공식을 통해 **"안전하면서도 기하학적인 초고속 다이렉트 매핑"**으로 치환해 주기 때문입니다.
 
 ## 📖 문서 구조
 - `README.md` : 현재 종합 매뉴얼 (본 문서)
