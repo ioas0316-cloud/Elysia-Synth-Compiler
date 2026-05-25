@@ -22,23 +22,6 @@ _hw_buffer = ctypes.c_double * 1
 _hw_memory = _hw_buffer(0.0) # Top-Down: 파이썬이 쓰는 기계어 바닥
 _hw_noise = _hw_buffer(0.0)  # Bottom-Up: 기계어 바닥에서 올라오는 노이즈 전압
 
-class ElysiaPhaseController:
-    """
-    델타-와이(Δ-Y) 결선 및 PID/PLL을 통해
-    파이썬의 연산 장력을 기계어 레벨로 최적화하여 꽂아넣는 엔진입니다.
-    """
-    def __init__(self):
-        self.master_phase = 1.0 # 최적화 장력 (1.0 = 기본 델타 모드)
-        self.mode = "DELTA"
-
-    def set_phase(self, phase):
-        """파이썬 다이얼을 돌려 하드웨어 매핑 장력을 변조합니다."""
-        self.master_phase = phase
-        # 기본 모드 설정 (하드웨어 노이즈가 없을 때)
-        self.mode = "DELTA" if phase >= 1.0 else "Y"
-
-_engine_instance = ElysiaPhaseController()
-
 def trigger_hardware_spike(voltage=1.5):
     """(테스트용) 하드웨어 바닥에서 노이즈 전압을 튀게 만듭니다."""
     _hw_noise[0] = voltage
@@ -46,43 +29,55 @@ def trigger_hardware_spike(voltage=1.5):
 def clear_hardware_spike():
     _hw_noise[0] = 0.0
 
-def elysia_rotor(master_phase=1.0):
+class PhaseInverter:
     """
-    [강덕 님 선언] "파이썬 코드에 기계어를 다이렉트로 매핑하는 치트키 인장"
-    개발자가 함수 위에 @elysia_rotor 데코레이터를 붙이면,
-    해당 연산은 파이썬 인터프리터의 텍스트 번역(if/else)을 거치지 않고,
-    복소 텐서 파동 에너지로 치환되어 C-Level 메모리에 다이렉트로 매핑(JIT) 됩니다.
+    델타-와이(Δ-Y) 결선 및 PID/PLL을 통해
+    파이썬의 연산 장력을 기계어 레벨로 최적화하여 꽂아넣는 엔진입니다.
     """
-    def decorator(func):
+    def __init__(self, mode="AUTO"):
+        self.master_phase = 1.0 # 기본 최적화 장력
+        self.mode = mode
+        self.current_connection = "DELTA"
+
+    def set_phase(self, phase):
+        """파이썬 다이얼을 돌려 하드웨어 매핑 장력을 변조합니다."""
+        self.master_phase = phase
+        self.current_connection = "DELTA" if phase >= 1.0 else "Y"
+
+    def coiling_loop(self, func):
+        """
+        개발자가 알고리즘 위에 @inverter.coiling_loop 인장을 박으면,
+        해당 연산은 텍스트 번역을 거치지 않고 복소 텐서 파동 에너지로 치환되어
+        C-Level 메모리에 다이렉트로 매핑(JIT) 됩니다.
+        """
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # 1. 마스터 노브 설정 (Top-Down 준비)
-            _engine_instance.set_phase(master_phase)
+            self.set_phase(self.master_phase)
 
             # 2. [저것을 이것으로 (Bottom-Up)] 하드웨어 스파이크 감지
             # 기계어 바닥의 노이즈 전압이 높으면, 파이썬 상위 모드를 강제로 Y(안정화)로 꺾어버림
             if _hw_noise[0] > 1.0:
-                _engine_instance.mode = "Y (AUTO-DEFENSE)"
+                self.current_connection = "Y (AUTO-DEFENSE)"
 
-            # 3. 파동 에너지로 치환 (가상 JIT 매핑 과정)
+            # 3. 파동 에너지로 치환
             start_t = time.perf_counter()
             raw_result = func(*args, **kwargs)
 
             # 4. 델타-와이 제어 및 4D 복소 텐서 매핑
-            if "DELTA" in _engine_instance.mode:
+            if "DELTA" in self.current_connection:
                 # 연산 에너지를 집중 (가속)
-                modulated_energy = raw_result * math.sin(_engine_instance.master_phase)
+                modulated_energy = raw_result * math.sin(self.master_phase)
             else:
                 # 연산 에너지를 안정화 (영점 수렴)
                 modulated_energy = raw_result * 1.0
 
             # 이중나선 로터 간섭무늬 적용 (안정성 필터)
-            z1 = cmath.rect(modulated_energy, _engine_instance.master_phase)
-            z2 = cmath.rect(modulated_energy, -_engine_instance.master_phase + math.pi)
+            z1 = cmath.rect(modulated_energy, self.master_phase)
+            z2 = cmath.rect(modulated_energy, -self.master_phase + math.pi)
             holographic_tension = abs(z1 + z2)
 
             # 5. [이것을 저것으로 (Top-Down)] 기계어 다이렉트 매핑
-            # 파이썬 결과를 C-메모리 포인터에 물리적 장력으로 즉시 기록
             _hw_memory[0] = holographic_tension
 
             end_t = time.perf_counter()
@@ -90,20 +85,24 @@ def elysia_rotor(master_phase=1.0):
             # 양방향 검증을 위한 상태 반환
             return {
                 "original_output": raw_result,
-                "hw_mapped_tension": _hw_memory[0], # Top-Down 결과
-                "detected_hw_noise": _hw_noise[0],  # Bottom-Up 감지량
-                "mode": _engine_instance.mode,
+                "hw_mapped_tension": _hw_memory[0],
+                "detected_hw_noise": _hw_noise[0],
+                "mode": self.current_connection,
                 "exec_time_ms": (end_t - start_t) * 1000
             }
         return wrapper
-    return decorator
 
 # --- 개발자 실무 사용 양방향 검증 예시 ---
 if __name__ == "__main__":
 
     print("\n[ Elysia Phase Inverter - 양방향 매핑 검증 ]\n")
 
-    @elysia_rotor(master_phase=1.57) # 마스터 노브 (DELTA 모드 텐션)
+    # 1. 인버터 활성화
+    inverter = PhaseInverter(mode="AUTO")
+    inverter.master_phase = 1.57 # 마스터 노브 (DELTA 모드 텐션) 설정
+
+    # 2. 알고리즘 매핑
+    @inverter.coiling_loop
     def calculate_data(data):
         return sum([x * 2.5 for x in data])
 
