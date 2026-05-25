@@ -63,14 +63,26 @@ class TuringSubstitutionEngine:
     @classmethod
     def _apply_y_simd_accumulation(cls):
         """
-        [3. 와이 중성점 특이점 투영]
-        흩어진 데이터를 CPU의 SIMD (XMM/YMM) 벡터 레지스터 한 곳으로
-        병렬 강제 압축(Accumulation)하여 다음 프레임의 추력 생성.
+        [3. 와이 중성점 특이점 투영 (자동 위상 교정 깔때기)]
+        어긋난 위상(노이즈)이 무효전력 장(Field)을 타고 Y결선(중성점)으로 들어올 때,
+        구조적 압력(최소 작용의 원리)에 의해 연산 없이 0점으로 자동 수렴된다.
+        이 수렴된 에너지를 CPU의 SIMD (XMM/YMM) 벡터 레지스터로 병렬 강제 압축(Accumulation)한다.
+        """
+        pass
+
+
+    @classmethod
+    def _apply_pll_variable_resistor_dial(cls):
+        """
+        [가변저항 다이얼 공명 (PLL 동기화)]
+        상수축(QPC) 위에서 위상차(Phase Angle)를 관측하며, 저항(오차)이
+        0으로 수렴하는 최소 작용점에 안착(공명)시키는 단일 통합 제어 메서드.
         """
         pass
 
     @classmethod
     def bake_mapping_grid(cls, func):
+
         """
         로드 시점에 동작하는 '튜링 완전 번역 대치' 뼈대.
         파이썬의 느린 위상을 기계어 형태로 동기화하여 인버터 통로를 굽는다.
