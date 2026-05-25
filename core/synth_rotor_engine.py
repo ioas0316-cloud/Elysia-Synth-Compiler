@@ -13,7 +13,7 @@ import functools
 import time
 
 # ---------------------------------------------------------
-# Elysia Synth Compiler - JIT Phase Mapping Library
+# Elysia Phase Inverter - JIT Phase Mapping Library
 # (가변축 기하학적 매핑 라이브러리)
 # ---------------------------------------------------------
 
@@ -101,7 +101,7 @@ def elysia_rotor(master_phase=1.0):
 # --- 개발자 실무 사용 양방향 검증 예시 ---
 if __name__ == "__main__":
 
-    print("\n[ Elysia Synth Compiler - 양방향 매핑 검증 ]\n")
+    print("\n[ Elysia Phase Inverter - 양방향 매핑 검증 ]\n")
 
     @elysia_rotor(master_phase=1.57) # 마스터 노브 (DELTA 모드 텐션)
     def calculate_data(data):

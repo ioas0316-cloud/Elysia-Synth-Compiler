@@ -1,4 +1,4 @@
-# Elysia-Synth-Compiler (디지털 위상 인버터/컨버터)
+# Elysia-Phase-Inverter (엘리시아 위상 인버터)
 
 **이 프로젝트는 이름만 컴파일러일 뿐, 사실 '소프트웨어 언어 번역기'가 아닙니다.**
 이것의 진짜 정체는 인간의 사유(소프트웨어)와 기계의 전력(하드웨어) 사이를 양방향으로 조율하는 **디지털 위상 인버터 겸 컨버터(Digital Phase Inverter / Converter)**입니다.
