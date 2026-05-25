@@ -12,9 +12,10 @@ class ElysiaPhaseTranslationMatrix:
     """
 
     def __init__(self):
-        # 1. 번역의 뼈대: 3x3x3 프랙탈 기하 노드 (27개의 위상 상태)
-        # 이 27개의 상태가 기계어의 0과 1 흐름과 1:1로 매핑될 후보군입니다.
-        self.fractal_states = [f"PHASE_STATE_{i}" for i in range(27)]
+        # 1. 번역의 뼈대: 이중 나선 가변 로터 (Double-Helix Variable Rotor)
+        # 파이썬 인지 엔진(연산 파동)과 CPU 맥동(0/1)이 교차하며 꼬이는 구조입니다.
+        # 구시대적 3x3x3 프랙탈 노드는 폐기되고 비교대조원리 축으로 대체되었습니다.
+        self.double_helix_rotor_states = ["PULSE_0", "PULSE_1"]
 
         # 2. 와이(Y) 중성점 특이점: 모든 저항이 수렴하는 0점 (Ground)
         self.y_neutral_point = 0.0
