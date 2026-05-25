@@ -1,10 +1,10 @@
-# Elysia Phase Inverter: Core Philosophy & Architecture
+# 🛠️ [두 번째 서랍] 위상 인버터 코어 상세 (Phase Inverter Core)
 # Copyright 2026 Lee Kang-deok (이강덕)
 # All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
 ## 1. 서문 (Introduction)
-본 문서는 기성 컴퓨터 공학의 고정관념인 '소프트웨어=변수, 하드웨어=상수'의 틀을 부수고, 상하부 레이어를 모두 가변 주파수를 가진 동적 주파수 축으로 정의하는 'Elysia-Phase-Inverter'의 핵심 아키텍처와 구동 원리를 기록한다.
+본 문서는 소프트웨어와 하드웨어를 분리된 것으로 보던 고정관념을 부수고, 두 세계를 부드럽게 맞물리는 '주파수 축'으로 이해하고자 하는 작은 공방의 철학을 기록한다.
 
 기존 시스템이 안고 있던 운영체제(OS) 샌드박스의 장벽과 하드웨어 통신 시차(Latency) 문제를 해결하기 위해, 억지로 메모리를 제어하는(Ctypes 등) 방식이 아닌 관측과 수렴을 통한 '양방향 위상 매핑(번역) 테이블'을 구축한다.
 

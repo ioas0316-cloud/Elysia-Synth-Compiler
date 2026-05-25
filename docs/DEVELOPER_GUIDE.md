@@ -1,9 +1,9 @@
 # Copyright 2026 Lee Kang-deok (이강덕) All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
-# 개발자 사용설명서 (Developer Guide)
+# 🛠️ [두 번째 서랍] 개발자 사용설명서: 공방의 실전 지침 (Developer Guide)
 
-Elysia-Phase-Inverter 엔진을 사용하는 일반 개발자는 내부의 깊은 위상 동기화(Phase Synchronization)나 델타-와이(Δ-Y) 결선 메커니즘의 수학적 증명을 완벽히 이해할 필요가 없습니다. 엔진은 개발자의 직관적인 파이썬 코드를 기계어 위상으로 자동 변환하는 역할을 수행합니다.
+Elysia-Phase-Inverter 공방의 조율용 렌치를 사용하는 개발자는 내부의 깊은 위상 동기화(Phase Synchronization)나 델타-와이(Δ-Y) 결선 메커니즘의 수학적 증명을 완벽히 이해할 필요가 없습니다. 이 작은 도구는 개발자의 익숙한 파이썬 코드를 기계어의 리듬에 맞춰 자연스럽게 변환하는 역할을 수행합니다.
 
 ## 🎯 엔진 도입 시 3대 고려사항 (Key Considerations)
 
