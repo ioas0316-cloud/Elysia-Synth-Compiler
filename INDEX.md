@@ -1,25 +1,24 @@
-# Elysia Synth Compiler (단일 레이어 가변축 엔진)
+# Copyright 2026 Lee Kang-deok (이강덕) All Rights Reserved.
+# Licensed under the Apache License, Version 2.0 (the "License")
 
-**[제 3 계층 외연 확장: 외부 기하학적 컴파일러 서브 룸]**
+# Elysia-Phase-Inverter 마스터 인덱스
 
-이 저장소는 Elysia Core 프로젝트의 사유 확장 파이프라인 중 하나인, 외부 배포 및 개념 증명을 위한 독립 서브 프로젝트입니다.
-인간의 사유(언어 OS)와 기계어(전류)가 단 하나의 위상 필름 위에서 섞여 구동되는 **단일 레이어(Single Layer)** 컴파일러의 원리를 구체화하고 증명합니다.
+이 문서는 **Elysia-Phase-Inverter**의 전체 사유와 철학, 기술적 명세서, 벤치마크 및 응용 방향성을 하나로 묶는 마스터 연결 지점입니다. 아래의 링크를 통해 위상 동기화 엔진의 심연으로 접근할 수 있습니다.
 
-## 핵심 구조 및 철학
+## 📖 핵심 문서 목록 (Documentation Core)
 
-*   [**VARIABLE_ROTOR_HOLOGRAPHIC_GEAR.md**](docs/VARIABLE_ROTOR_HOLOGRAPHIC_GEAR.md)
-    *   이 엔진의 근본 철학이자 문명사적 선언문.
-    *   4D 복소수 텐서 간섭무늬 필름을 통한 Non-Collision 파동 메모리.
-    *   이중나선 로터(Double-Helix Rotor)와 델타-와이(Δ-Y) 결선 등 물리적 제어 원리 명세.
+*   **[원리 구조 분석 (Architecture)](docs/ARCHITECTURE.md)**
+    *   엔진의 튜링 위상 동기화, QPC 이중 가변 로터, 델타-와이(Δ-Y) 결선의 물리적 투영 원리를 서술합니다.
+*   **[개발자 사용설명서 (Developer Guide)](docs/DEVELOPER_GUIDE.md)**
+    *   일반 개발자가 `@turing_translation_layer`를 사용하여 파이썬 로직을 기계어 위상으로 직동 매핑하는 방법을 설명합니다.
+*   **[응용 방향성 (Applicable Forms)](docs/APPLICATIONS.md)**
+    *   가변축 엔진이 로컬 AI 추론, 초고주파수 트레이딩(HFT), 로봇 공학 실시간 제어 등에서 어떻게 무손실 극초음속의 위력을 발휘하는지 설명합니다.
 
-## 커널 프로토타입
+## 🔬 심화 및 분석 리포트 (Deep Dive & Reports)
 
-*   [**synth_rotor_engine.py**](core/synth_rotor_engine.py)
-    *   `ctypes` 기반 양방향 이중 매핑 브릿지 (Top-Down / Bottom-Up).
-    *   QPC 1000Hz 동기화, PID & PLL 위상 제어.
-    *   파이썬의 복소수 위상각을 직접 C/바이너리 레벨에 매핑하는 직동적 인터페이스.
-
-## 라이선스
-
-이 프로젝트는 [Apache 2.0 License](LICENSE)를 따릅니다.
-누구든 이 엔진의 가변축 로터를 돌려 기계의 맥박을 당신의 파동과 동기화할 수 있습니다.
+*   **[위상 인버터 코어 철학 (Phase Inverter Core)](docs/PHASE_INVERTER_CORE.md)**
+    *   엔진의 가장 근본적인 철학과 설계 사상을 다룹니다.
+*   **[위상 매핑 테이블 (Phase Mapping Table)](docs/PHASE_MAPPING_TABLE.md)**
+    *   실제 위상 변환 규칙과 매핑 구조를 서술합니다.
+*   **[벤치마크 리포트 (Benchmark Report)](docs/BENCHMARK_REPORT.md)**
+    *   기성 방식과 튜링 위상 인버터 직동 매핑의 시뮬레이션 성능 측정 결과를 포함합니다. (시뮬레이션 스크립트: `benchmark.py`)
