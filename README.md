@@ -62,4 +62,11 @@ python3 core/synth_rotor_engine.py
 - `core/synth_rotor_engine.py` : 프로토타입 커널 엔진 소스 및 노이즈 인젝터
 
 ## License
-Apache License 2.0
+
+Copyright 2026 Lee Kang-deok (이강덕)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
