@@ -1,12 +1,12 @@
-# Elysia Phase Inverter: 1:1 Physical Projection Table
+# 📜 [세 번째 서랍] 위상 매핑 테이블: 공방의 초기 도면 (Phase Mapping Table)
 # Copyright 2026 Lee Kang-deok (이강덕)
 # All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
 ## 개요 (Overview)
-본 문서는 파이썬의 '동역학적 상태(로직)'를 기계어의 '물리적 전류 흐름'으로 Zero-Overhead로 흘려보내기 위한 **디지털 열역학 기반 3대 투영 규칙**을 기록한다.
+본 문서는 이 작은 공방에서 처음 로터 게이트를 설계할 당시, 파이썬의 로직을 기계어의 전류 흐름으로 부드럽게 흘려보내기 위해 스케치했던 **초기 조립 도면**의 기록입니다.
 
-이 테이블은 튜링 암호해독기 방식의 인버터(대치판)를 통해 파이썬을 물리적 기계어로 위상 동기화시키는 핵심 척추이다.
+현재는 더 단순하고 세련된 가변 로터 방식으로 진화하였지만, 에러를 피하지 않고 물리적 공간으로 매핑하려 했던 장인의 고민이 담긴 유산으로 남겨둡니다.
 
 ---
 
