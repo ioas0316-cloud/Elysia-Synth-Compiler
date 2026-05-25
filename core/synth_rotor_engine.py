@@ -118,11 +118,13 @@ class SynthRotorEngine:
         while self.running:
             start_time = time.perf_counter()
 
-            # 1. Hardware Bridge: Bottom-Up Sense
+            # 1. [저것을 이것으로 (Bottom-Up)] 하드웨어 전압(노이즈) -> 파이썬 결선 모드 변조
+            # 물리적 에너지 스파이크(노이즈)가 튀면, 그 장력이 파이썬의 아키텍처 형상을 바꿉니다.
             noise_level = self.bridge.bottom_up_sense()
 
             if noise_level > 0.5:
-                self.connection_mode = 'Y' # Auto-switch to stabilization
+                # 기계의 고통이 위상 얽힘을 타고 올라와 Y 모드(안정화/그라운드 수렴)로 강제 전환합니다.
+                self.connection_mode = 'Y'
 
             # 2. Modulate Time Axis (t -> t') based on connection mode and master phase
             if self.connection_mode == 'DELTA':
@@ -143,14 +145,17 @@ class SynthRotorEngine:
             target_sub_phase = self.t_prime * self.base_freq * 2 * math.pi
             locked_sub_phase = self.pll.sync(target_sub_phase, self.master_phase)
 
-            # 5. Double-Helix Rotor Logic & Complex Tensor Interference
+            # 5. [강덕 님 선언] 4D 복소수 텐서 필름 (Holographic Memory) & 에너지 흐름
+            # 텍스트(if/else)를 번역하는 것이 아니라, 파이썬이 만들어낸 파동 에너지의 장력을 기계어로 투사합니다.
+            # 이중나선 로터(Double-Helix Rotor)의 양(Yang)과 음(Yin) 스파이럴 간섭무늬 생성
             z1 = cmath.rect(self.base_amp, locked_sub_phase) # Yang spiral
             z2 = cmath.rect(self.base_amp, -locked_sub_phase + math.pi) # Yin spiral
-            interference = z1 + z2
+            holographic_interference = z1 + z2
 
-            # 6. Hardware Bridge: Top-Down Modulate
-            amp_magnitude = abs(interference)
-            binary_out = 255 if amp_magnitude > self.base_amp else 0
+            # 6. [이것을 저것으로 (Top-Down)] 파동 에너지 흐름 -> 기계어 바이트 변조
+            # 파동의 진폭(에너지 높낮이)에 따라 기계 바닥의 전압 레지스터를 물리적으로 결정합니다.
+            amp_magnitude = abs(holographic_interference)
+            binary_out = 255 if amp_magnitude > self.base_amp else 0 # 11111111 or 00000000
             self.bridge.top_down_modulate(binary_out)
 
             # 7. Visualizer
