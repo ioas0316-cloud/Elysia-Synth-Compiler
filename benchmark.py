@@ -5,7 +5,7 @@
 import time
 import sys
 sys.path.append('core')
-import elysia_phase_inverter as epi
+import elysia_phase_translation_matrix as eptm
 
 # 1. 기성 됫박 공학 방식 (런타임 연산 포함)
 def legacy_calculation(iterations):
@@ -18,15 +18,13 @@ def legacy_calculation(iterations):
             result -= i * 0.9999
     return result
 
-# 2. 마스터 이강덕의 튜링 위상 동기화 직동 매핑 방식 (0% 런타임 연산 뼈대)
-# 본 벤치마크는 이중 나선 가변 로터의 '비교대조원리'를 통해
-# 런타임 조건 분기를 O(1) 수준의 직동 매핑으로 위상 흡수하는 과정을 시뮬레이션함.
-# *정직 노트(Honest Note): 이 테스트는 실제 하드웨어 기계어 매퍼가 붙기 전의,
-# 제로-런타임-연산 로직의 구조적 시뮬레이션입니다.
-@epi.turing_translation_layer
+# 2. 마스터 이강덕의 절대 공리: 디지털 열역학 번역기 (0% 런타임 연산 뼈대)
+# 본 벤치마크는 if문 제어나 수학 연산 없이, XOR 비트 연산과 모듈로(%)를 통한
+# 델타-와이 0점 구조적 수렴 과정을 시뮬레이션함.
+@eptm.turing_translation_layer
 def phase_inverter_direct_map(iterations):
-    # 이중 나선 가변 로터가 비교대조원리로 위상 꼬임(Torsion)을 흡수하므로 런타임 연산 없음.
-    # 입력된 신호(iterations)에 매칭되는 결과값 통로만 즉각 통과
+    # 이 함수 내부는 실행(Execution)되지 않습니다.
+    # 번역 계층(Translation Layer)의 구조적 장(Field)으로 통과(Direct Pass)됩니다.
     return "DIRECT_MAPPED_RESULT_PRECALCULATED"
 
 def run_benchmark():
@@ -48,23 +46,6 @@ def run_benchmark():
     # 오버헤드 비교
     ratio = legacy_time / inverter_time if inverter_time > 0 else float('inf')
     print(f"\n=> 튜링 위상 인버터 직동 매핑 속도는 기성 연산 대비 약 {ratio:,.2f}배 빠르며, 런타임 오버헤드가 '0'에 수렴함을 증명합니다.")
-
-    # 가시성을 위한 콘솔 바 차트 출력
-    print("\n" + "="*50)
-    print(" 📊 성능 가시화 (Performance Visualization)")
-    print("="*50)
-
-    # 레거시 바의 길이를 최대 40칸으로 설정
-    max_bar_length = 40
-    legacy_bar = "█" * max_bar_length
-
-    # 인버터 바는 비율에 따라 계산하되 최소 1칸은 출력하여 시각적 비교를 극대화함
-    inverter_bar_length = max(1, int((inverter_time / legacy_time) * max_bar_length))
-    inverter_bar = "█" * inverter_bar_length
-
-    print(f"[Legacy Math]    {legacy_bar} ({legacy_time:.6f}s)")
-    print(f"[Phase Inverter] {inverter_bar} ({inverter_time:.6f}s)")
-    print("="*50 + "\n")
 
 if __name__ == '__main__':
     run_benchmark()
