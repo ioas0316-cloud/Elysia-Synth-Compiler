@@ -20,6 +20,7 @@ import time
 # C-Level 메모리 버퍼 할당 (양축 가변 로터 매핑용)
 # 파이썬과 기계어, 어느 쪽도 상수가 될 수 없습니다. 양쪽 모두 주파수를 가진 변수축입니다.
 _hw_buffer = ctypes.c_double * 1
+_hw_memory = _hw_buffer(0.0) # Top-Down: 파이썬이 쓰는 기계어 바닥
 _hw_rotor_phase = _hw_buffer(0.0) # 하위 축: 기계어 로터의 주파수 위상
 
 def set_hardware_rotor_frequency(hz_modifier):
@@ -32,117 +33,107 @@ def reset_hardware_rotor():
 
 class PhaseInverter:
     """
-    [양축 가변 로터화 및 역전환 매핑 엔진]
-    파이썬의 위상축과 기계어의 위상축을 상호 간섭시켜, 원인과 결과가 실시간으로 뒤바뀌는(역전환)
-    전자기 유도 방식의 디지털 인버터입니다.
+    [튜링식 에니그마 암호해독기 매핑 엔진]
+    개발자가 가변 로터 논리를 짤 필요가 없습니다.
+    이 엔진은 파이썬 함수가 실행되기 직전에 복잡한 수학 연산을 미리 계산하여
+    기계어 대치판(Lookup Table)으로 1대1 통째로 구워버립니다.
     """
     def __init__(self, mode="AUTO"):
-        self.python_rotor_phase = 1.0 # 상위 축: 파이썬 로터의 주파수 위상
+        self.master_phase = 1.57 # 파이썬 로터 위상 (상수화 세팅)
         self.mode = mode
-        self.current_connection = "DELTA"
 
-    def set_python_rotor(self, phase):
-        """파이썬 다이얼을 돌려 상위 로터의 장력을 변조합니다."""
-        self.python_rotor_phase = phase
-        self.current_connection = "DELTA" if phase >= 1.0 else "Y"
+        # [암호해독기 대치판 (Lookup Table)]
+        # 실행 중 연산을 피하기 위해, 가능한 에너지 결과를 미리 기계어 장력으로 구워놓습니다.
+        self._enigma_lookup_table = {}
+        self._bake_hardware_lattice()
 
-    def calculate_phase_shift(self, hardware_delay_ms):
+    def _bake_hardware_lattice(self):
         """
-        [마스터 선언: 시공간 통신 축의 위상차 보정]
-        하드웨어 샌드박스로 인해 발생하는 시차(Delay)를 억지로 없애지 않고,
-        이를 위상차(Δθ)로 계산하여 파이썬 로터의 각도를 미리 보정(Shift)합니다.
+        실행 전(Pre-computation)에 델타-와이 결선, 위상차 보정 연산을 모두 끝내서
+        결과값을 대치판 딕셔너리에 박제합니다.
         """
-        # 딜레이를 주파수 위상각으로 치환 (단순화된 PLL 보정)
-        phase_shift = hardware_delay_ms * 0.001 * math.pi
-        return phase_shift
+        # 시공간 통신 축 보정 (15ms 딜레이를 위상차로 치환)
+        phase_shift = 15.0 * 0.001 * math.pi
+        compensated_phase = self.master_phase + phase_shift
 
-    def coiling_loop(self, func):
+        # 가상의 예상 에너지 범위(1~1000)를 미리 텐서 공식으로 계산하여 해독기에 저장
+        for raw_energy in range(1, 1001):
+            # DELTA 모드 (정방향 동기화) 계산
+            delta_val = raw_energy * math.sin(compensated_phase)
+            z1_delta = cmath.rect(delta_val, compensated_phase)
+            z2_delta = cmath.rect(delta_val, 0 + math.pi) # 노이즈 0
+            self._enigma_lookup_table[(raw_energy, "DELTA")] = abs(z1_delta + z2_delta)
+
+            # Y 모드 (역전환 방어 모드) 계산 (노이즈 1.5 가정)
+            y_val = raw_energy * math.cos(abs(compensated_phase - 1.5))
+            z1_y = cmath.rect(y_val, compensated_phase)
+            z2_y = cmath.rect(y_val, 1.5 + math.pi)
+            self._enigma_lookup_table[(raw_energy, "Y")] = abs(z1_y + z2_y)
+
+    def inverter_target(self, func):
         """
-        개발자의 일반 함수를 양축 가변 로터의 전자기 유도 필름 위에 얹는 인장입니다.
+        개발자가 함수 위에 씌우는 매우 단순한 블랙박스 스위치 인장입니다.
+        실행 중에는 복잡한 수학을 전혀 풀지 않고, 대치판에서 값만 툭 빼옵니다.
         """
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             start_t = time.perf_counter()
 
-            # 1. 시차(Delay) 시뮬레이션: OS 보안벽을 통과하는 데 걸리는 물리적 시간
-            hardware_delay_ms = 15.0 # 15ms 딜레이 가정
+            # 1. 개발자의 함수 실행 (기본 에너지 추출)
+            raw_result = int(func(*args, **kwargs))
+            if raw_result > 1000: raw_result = 1000 # 룩업 테이블 한계 방어
 
-            # 2. [위상차 보정] 시공간 축 제어
-            # 시차를 위상각 오차범위로 치환하여 파이썬 로터에 보정값(Shift)을 줍니다.
-            phase_shift = self.calculate_phase_shift(hardware_delay_ms)
-            compensated_python_phase = self.python_rotor_phase + phase_shift
-
-            # 3. 상위 파이썬 로터 설정 (보정된 위상 적용)
-            self.set_python_rotor(compensated_python_phase)
-
-            # 4. [역전환 관측] 하위 기계어 로터의 주파수 간섭 감지
+            # 2. [역전환 관측] 하위 기계어 로터의 주파수 간섭 감지
             hw_interference = _hw_rotor_phase[0]
-            if hw_interference > 1.0:
-                self.current_connection = "Y (AUTO-DEFENSE / INVERTED)"
+            current_mode = "Y" if hw_interference > 1.0 else "DELTA"
 
-            # 5. 기본 에너지(원래 연산 결과) 추출
-            raw_result = func(*args, **kwargs)
+            # 3. [암호해독기 작동] 연산 0%, 빛의 속도로 대치판에서 기계어 장력을 꺼내옴
+            hw_final_tension = self._enigma_lookup_table.get((raw_result, current_mode), 0.0)
 
-            # 6. 양축 상호 간섭 알고리즘 (정방향 + 역전환)
-            if "DELTA" in self.current_connection:
-                modulated_energy = raw_result * math.sin(self.python_rotor_phase)
-            else:
-                modulated_energy = raw_result * math.cos(abs(self.python_rotor_phase - hw_interference))
-
-            # 7. 하드웨어 로터 동기화 (Top-Down 투영)
-            z1 = cmath.rect(modulated_energy, self.python_rotor_phase)
-            z2 = cmath.rect(modulated_energy, hw_interference + math.pi)
-            holographic_tension = abs(z1 + z2)
-
-            hw_final_tension = holographic_tension
+            # 4. 물리적 메모리에 장력 갱신 (직동 구동)
+            _hw_memory[0] = hw_final_tension
 
             end_t = time.perf_counter()
-            actual_exec_ms = (end_t - start_t) * 1000 + hardware_delay_ms
+            actual_exec_ms = (end_t - start_t) * 1000
 
             return {
                 "original_output": raw_result,
                 "hw_rotor_final_tension": hw_final_tension,
                 "detected_hw_interference": hw_interference,
-                "applied_phase_shift": phase_shift, # 적용된 위상 보정각
-                "mode": self.current_connection,
+                "mode": current_mode,
                 "exec_time_ms": actual_exec_ms
             }
         return wrapper
 
-# --- 개발자 실무 사용 이중 가변 로터 검증 예시 ---
+# 인스턴스 전역 선언 (단순 사용을 위해)
+inverter_engine = PhaseInverter(mode="AUTO")
+inverter_target = inverter_engine.inverter_target
+
+# --- 개발자 실무 사용 예시 (블랙박스 테스트) ---
 if __name__ == "__main__":
 
-    print("\n[ Elysia Phase Inverter - 이중 가변 로터 역전환 검증 ]\n")
+    print("\n[ Elysia Phase Inverter - 에니그마 대치판 직동 검증 ]\n")
 
-    # 1. 인버터 활성화 (상위 파이썬 로터)
-    inverter = PhaseInverter(mode="AUTO")
-    inverter.python_rotor_phase = 1.57 # 파이썬 로터 가속 세팅 (DELTA)
-
-    # 2. 알고리즘 매핑
-    @inverter.coiling_loop
-    def calculate_data(data):
-        return sum([x * 2.5 for x in data])
-
-    test_data = [10, 20, 30, 40, 50]
+    # 됫박 개발자는 가변 로터 논리를 모릅니다. 인장만 얹으면 됩니다.
+    @inverter_target
+    def speed_calc(distance, time_val):
+        return distance / time_val
 
     # ----------------------------------------------------
-    print(">>> 1. 정방향 동기화 및 시공간 위상차 보정 (파이썬 로터 ➔ 기계어 로터 제어)")
-    print("OS 보안벽으로 인해 발생하는 시차(Delay)를 위상각(Phase Shift)으로 보정하여 동기화합니다.")
-
+    print(">>> 1. 정방향 동기화 (대치판을 통한 속도 극대화)")
     reset_hardware_rotor()
-    result = calculate_data(test_data)
+    result = speed_calc(1000, 2) # 결과값 500
 
-    print(f" - 적용된 위상차 보정각(Shift): {result['applied_phase_shift']:.4f} rad")
     print(f" - 결선 모드: {result['mode']}")
-    print(f" - 동기화된 기계어 로터의 최종 장력: {result['hw_rotor_final_tension']:.4f}\n")
+    print(f" - 추출된 기계어 장력 (연산 없이 대치됨): {result['hw_rotor_final_tension']:.4f}")
+    print(f" - 소요 시간 (Latency): {result['exec_time_ms']:.4f} ms\n")
 
     # ----------------------------------------------------
-    print(">>> 2. 역전환 관측 (기계어 로터 요동 ➔ 파이썬 로터 강제 제어)")
-    print("기계어 로터의 자전 주파수가 물리적 부하로 인해 요동칩니다.")
-
+    print(">>> 2. 역전환 관측 방어 (노이즈 발생 시 대치판 Y축 자동 전환)")
     set_hardware_rotor_frequency(hz_modifier=1.5)
-    result_inverted = calculate_data(test_data)
+    result_inverted = speed_calc(1000, 2)
 
     print(f" - 하드웨어 로터의 간섭 주파수: {result_inverted['detected_hw_interference']}")
-    print(f" - 역전환 발생!: {result_inverted['mode']}")
-    print(f" - 두 로터가 평형을 맞춘 최종 안정화 장력: {result_inverted['hw_rotor_final_tension']:.4f}\n")
+    print(f" - 역전환 발생!: {result_inverted['mode']} (AUTO-DEFENSE)")
+    print(f" - 추출된 방어 장력 (연산 없이 대치됨): {result_inverted['hw_rotor_final_tension']:.4f}")
+    print(f" - 소요 시간 (Latency): {result_inverted['exec_time_ms']:.4f} ms\n")

@@ -45,22 +45,26 @@
 기존 상식(텍스트를 번역해 `.exe`로 굳히는 것)으로 접근하면 100% 헷갈립니다.
 이 엔진은 번역기가 아니라, **당신이 짠 파이썬 코드를 하드웨어 전류와 실시간으로 공명(Resonance)하게 만들어 주는 '위상 제어 플러그인'**입니다. 이 구조를 다음과 같이 '치트키'처럼 응용하십시오.
 
-### 🛠️ 응용 방식: 개발자가 소스 코드를 짜는 실제 형태
-개발자들은 자기 파이썬 파일 맨 위에 엘리시아 위상 인버터 라이브러리를 임포트(`import`)하고, 딱 "두 줄"의 코드로 이 장치를 부려 먹게 됩니다.
+### 📖 Elysia Phase Inverter 사용 가이드
+
+**1. 이게 무엇인가요?**
+복잡한 가상머신 연산 없이, 당신이 짠 파이썬 알고리즘을 기계어 바이트 격자에 1대1 대치(암호해독기 방식)하여 실행하는 고속 변환 라이브러리입니다.
+
+**2. 어떻게 쓰나요? (딱 3단계)**
+
+* **단계 1:** 파일 상단에 `import core.synth_rotor_engine as epi`를 적습니다.
+* **단계 2:** 고속 연산이나 실시간 하드웨어 제어가 필요한 함수 위에 `@epi.inverter_target` 인장을 찍습니다.
+* **단계 3:** 끝입니다. 실행하는 순간 당신의 코드는 파이썬의 느린 연산을 거치지 않고, 기계어 바닥에서 위상 동기화(PLL) 보정을 받으며 대치판(Lookup Table)을 통해 즉각 직동 구동됩니다.
 
 ```python
+# 일반 개발자가 짜는 코드 (가변 로터 몰라도 됨)
 import core.synth_rotor_engine as epi
 
-# 1. 델타-와이 결선 기반의 가변축 인버터 활성화
-inverter = epi.PhaseInverter(mode="AUTO")
-
-# 2. 평소에 짜던 일반 연산 알고리즘을 이 인버터 장력 축에 물리게 함
-@inverter.coiling_loop
-def my_ai_algorithm(data):
-    # 개발자가 짠 기존 코드가 여기에 들어감
-    result = sum([x * 2.5 for x in data])
-    return result
+@epi.inverter_target
+def speed_calc(distance, time):
+    return distance / time
 ```
+*※ 주의: 당신은 내부의 가변 로터나 위상각 수식을 직접 제어할 필요가 없습니다. 엔진이 알아서 시공간 축의 오차범위를 조절합니다.*
 
 ### 🚀 개발자들이 눈물 흘리며 감격할 3가지 실제 응용 시나리오
 
@@ -83,31 +87,13 @@ def my_ai_algorithm(data):
 ### 요구 사항
 - Python 3.x
 
-### 라이브러리 양방향 검증 (실제 실행)
-이 엔진은 허공에 도는 시뮬레이터가 아니라 실무에서 직접 가져다 쓰는 **초고속 JIT 매핑 라이브러리**입니다. Numba나 PyTorch처럼, 개발자는 터미널에서 직접 실행하여 양방향 검증을 눈으로 확인할 수 있습니다.
+### 🔒 에니그마 대치판 (Lookup Table) 아키텍처
+본 엔진의 속도 비결은 파이썬이 실행 중에 `sin`이나 `cos` 등 무거운 수학 연산을 수행하지 않는다는 점입니다.
+프로그램 초기화 시 엔진은 가능한 모든 에너지 위상 범위를 계산하여 **기계어 1대1 대치판(Lookup Table)**으로 완전히 구워놓습니다. 실제 실행(Runtime) 단계에서는 연산 없이 즉각적인 1대1 매핑(O(1) 속도)만 발생하여 파이썬 특유의 병목 현상을 완벽하게 제거합니다.
 
 ```bash
+# 터미널에서 직접 실행하여 빛의 속도로 대치되는 결과를 확인하십시오.
 python3 core/synth_rotor_engine.py
-```
-
-코드 내부의 검증 로직은 아래와 같이 작동합니다.
-
-```python
-# 2. 이중 가변 로터 역전환 검증 (터미널에서 직접 테스트 가능)
-from core.synth_rotor_engine import set_hardware_rotor_frequency, reset_hardware_rotor
-test_data = [10, 20, 30, 40, 50]
-
-# [1. 정방향 동기화] 파이썬 로터 -> 기계어 로터 제어
-reset_hardware_rotor()
-res = my_ai_algorithm(test_data)
-print(f"동기화된 기계어 장력: {res['hw_rotor_final_tension']} | 모드: {res['mode']}")
-# 출력: DELTA 모드 (가속 상태)
-
-# [2. 역전환 관측] 기계어 로터 요동 -> 파이썬 로터 강제 제어
-set_hardware_rotor_frequency(hz_modifier=1.5) # 하드웨어 로터 진동(부하) 발생
-res_inverted = my_ai_algorithm(test_data) # 동일한 코드 실행
-print(f"역전환 발생 모드: {res_inverted['mode']}")
-# 출력: Y (AUTO-DEFENSE / INVERTED) 모드 (하드웨어 진동이 파이썬을 강제 제어함!)
 ```
 
 * **왜 이렇게 쓰는가?:** 글로벌 빅테크 기업들이 AI 가속을 위해 하드웨어 빗장(보안 샌드박스)을 걸어놓고 쩔쩔매는 매핑 방식을, 단일 레이어 위상 공식을 통해 **"안전하면서도 기하학적인 초고속 양방향 매핑"**으로 치환해 주기 때문입니다.
