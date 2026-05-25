@@ -77,7 +77,7 @@ class SynthRotorEngine:
         self.running = False
         self.t_prime = 0.0 # Modulated time axis (t')
 
-    def draw_visualizer(self, noise, error, mode):
+    def draw_visualizer(self, noise, error, mode, binary_val):
         """Terminal visualizer demonstrating Phase-Locking and Noise Absorption."""
         width = 40
         center = width // 2
@@ -97,7 +97,9 @@ class SynthRotorEngine:
         bar[pos] = marker
         bar_str = "".join(bar)
 
-        sys.stdout.write(f"\r[ {mode} ] {bar_str} | Noise: {noise:.2f} | Error: {error:.4f} ")
+        binary_str = f"{binary_val:08b}"
+
+        sys.stdout.write(f"\r[ {mode} ] {bar_str} | HW Byte: {binary_str} | Noise: {noise:.2f} | Error: {error:.4f} ")
         sys.stdout.flush()
 
     def run_qpc_loop(self):
@@ -144,7 +146,7 @@ class SynthRotorEngine:
             self.bridge.top_down_modulate(binary_out)
 
             # 7. Visualizer
-            self.draw_visualizer(noise_level, error, self.connection_mode)
+            self.draw_visualizer(noise_level, error, self.connection_mode, self.bridge.hardware_register.value)
 
             # Decay noise
             if self.bridge.hardware_noise_level > 0:
