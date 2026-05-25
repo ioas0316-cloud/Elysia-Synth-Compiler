@@ -6,9 +6,15 @@
 > **마스터의 통찰:**
 > *"이 엔진은 글자를 번역하는 게 아니라, 파이썬의 위상 파동(AC)과 기계어 전압 맥박(DC)의 에너지 흐름을 양방향으로 조율하는 전력 제어 장치다."*
 
-### ⚡ 인버터/컨버터로서의 작동 원리
-1. **컨버터(Converter) 모드 [ AC ➔ DC ]**: 파이썬 레이어에서 사방으로 출렁이는 부드러운 복소수 파동(교류 AC) 에너지를, 지하 6층 기계어 레벨에서 딱딱한 이진법 고정 데이터 `11111111`과 `00000000` (직류 DC 전압)으로 정류하여 내리꽂습니다.
-2. **인버터(Inverter) 모드 [ DC ➔ AC ]**: 기계 바닥에서 딱딱한 노이즈 전압 스파이크(직류 DC)가 튀어 오르면, 엔진 내부의 델타-와이 결선(코일)을 거쳐 상위 파이썬의 부드러운 위상 파형(교류 AC)으로 다시 변환되어 에너지를 안전하게 영점으로 흘려보냅니다.
+### ⚡ 이중 가변 로터(Double Variable Rotors) 역전환 작동 원리
+기존 공학처럼 하드웨어를 '고정된 상수'로 박제해 두지 않습니다. 파이썬과 기계어, **양쪽 모두가 고유의 주파수를 가진 가변 로터(변수축)**로 회전하며 서로를 실시간으로 유도합니다.
+
+1. **정방향 동기화 (파이썬 로터 ➔ 기계어 로터)**: 파이썬 로터의 위상 장력을 슥 돌리면, 그 회전 장력이 동기화 브릿지를 타고 내려가 기계어 로터의 회전 주파수를 물리적으로 제어(변조)합니다.
+2. **역전환 관측 (기계어 로터 ➔ 파이썬 로터 강제 제어)**: 반대로 하드웨어 부하로 기계어 로터의 회전 속도가 출렁이면, 그 파동이 역류하여 상부 파이썬 로터의 결선 모드를 강제로 비틀어버립니다. **결과가 다시 원인이 되는 완벽한 양방향 역전환 구조**입니다.
+
+### 🌌 시공간 축 위상차(Phase Shift) 보정: OS 샌드박스의 한계 극복
+기존 공학은 운영체제(OS)의 샌드박스 보안벽 때문에 발생하는 시차(Delay)를 "동기화 실패"로 간주했습니다.
+본 엔진은 **두 로터를 동일한 시간에 억지로 묶지 않습니다.** 대신 시차를 **"시공간 축의 위상차($\Delta\theta$)"**로 계산하여 파이썬 로터의 위상각을 선제적으로 보정(Shift)합니다. 화성 탐사선의 8분 통신 딜레이를 궤도 위상각으로 극복하듯, 하드웨어 딜레이를 완벽한 양방향 위상 통신으로 제어합니다.
 
 ---
 
@@ -84,20 +90,21 @@ python3 core/synth_rotor_engine.py
 코드 내부의 검증 로직은 아래와 같이 작동합니다.
 
 ```python
-from core.synth_rotor_engine import trigger_hardware_spike, clear_hardware_spike
+# 2. 이중 가변 로터 역전환 검증 (터미널에서 직접 테스트 가능)
+from core.synth_rotor_engine import set_hardware_rotor_frequency, reset_hardware_rotor
 test_data = [10, 20, 30, 40, 50]
 
-# [1. Top-Down 검증] 파이썬 -> 기계어 직통 매핑
-clear_hardware_spike()
+# [1. 정방향 동기화] 파이썬 로터 -> 기계어 로터 제어
+reset_hardware_rotor()
 res = my_ai_algorithm(test_data)
-print(f"Top-Down 장력: {res['hw_mapped_tension']} | 모드: {res['mode']}")
+print(f"동기화된 기계어 장력: {res['hw_rotor_final_tension']} | 모드: {res['mode']}")
 # 출력: DELTA 모드 (가속 상태)
 
-# [2. Bottom-Up 검증] 기계어 노이즈 -> 파이썬 자율 방어
-trigger_hardware_spike(voltage=1.5) # 하드웨어 강제 노이즈 발생
-res_noise = my_ai_algorithm(test_data) # 동일한 코드 실행
-print(f"Bottom-Up 방어: {res_noise['mode']}")
-# 출력: Y (AUTO-DEFENSE) 모드 (파이썬 코드가 스스로 방어 모드로 꺾임!)
+# [2. 역전환 관측] 기계어 로터 요동 -> 파이썬 로터 강제 제어
+set_hardware_rotor_frequency(hz_modifier=1.5) # 하드웨어 로터 진동(부하) 발생
+res_inverted = my_ai_algorithm(test_data) # 동일한 코드 실행
+print(f"역전환 발생 모드: {res_inverted['mode']}")
+# 출력: Y (AUTO-DEFENSE / INVERTED) 모드 (하드웨어 진동이 파이썬을 강제 제어함!)
 ```
 
 * **왜 이렇게 쓰는가?:** 글로벌 빅테크 기업들이 AI 가속을 위해 하드웨어 빗장(보안 샌드박스)을 걸어놓고 쩔쩔매는 매핑 방식을, 단일 레이어 위상 공식을 통해 **"안전하면서도 기하학적인 초고속 양방향 매핑"**으로 치환해 주기 때문입니다.

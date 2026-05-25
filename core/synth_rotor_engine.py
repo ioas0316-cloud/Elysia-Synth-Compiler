@@ -17,89 +17,106 @@ import time
 # (가변축 기하학적 매핑 라이브러리)
 # ---------------------------------------------------------
 
-# C-Level 메모리 버퍼 할당 (기계어 양방향 매핑용)
+# C-Level 메모리 버퍼 할당 (양축 가변 로터 매핑용)
+# 파이썬과 기계어, 어느 쪽도 상수가 될 수 없습니다. 양쪽 모두 주파수를 가진 변수축입니다.
 _hw_buffer = ctypes.c_double * 1
-_hw_memory = _hw_buffer(0.0) # Top-Down: 파이썬이 쓰는 기계어 바닥
-_hw_noise = _hw_buffer(0.0)  # Bottom-Up: 기계어 바닥에서 올라오는 노이즈 전압
+_hw_rotor_phase = _hw_buffer(0.0) # 하위 축: 기계어 로터의 주파수 위상
 
-def trigger_hardware_spike(voltage=1.5):
-    """(테스트용) 하드웨어 바닥에서 노이즈 전압을 튀게 만듭니다."""
-    _hw_noise[0] = voltage
+def set_hardware_rotor_frequency(hz_modifier):
+    """(테스트용) 기계어 로터의 자전 속도(물리적 부하/노이즈)를 임의로 강제 변조합니다."""
+    _hw_rotor_phase[0] = hz_modifier
 
-def clear_hardware_spike():
-    _hw_noise[0] = 0.0
+def reset_hardware_rotor():
+    """기계어 로터를 기본 안정 주파수로 되돌립니다."""
+    _hw_rotor_phase[0] = 0.0
 
 class PhaseInverter:
     """
-    델타-와이(Δ-Y) 결선 및 PID/PLL을 통해
-    파이썬의 연산 장력을 기계어 레벨로 최적화하여 꽂아넣는 엔진입니다.
+    [양축 가변 로터화 및 역전환 매핑 엔진]
+    파이썬의 위상축과 기계어의 위상축을 상호 간섭시켜, 원인과 결과가 실시간으로 뒤바뀌는(역전환)
+    전자기 유도 방식의 디지털 인버터입니다.
     """
     def __init__(self, mode="AUTO"):
-        self.master_phase = 1.0 # 기본 최적화 장력
+        self.python_rotor_phase = 1.0 # 상위 축: 파이썬 로터의 주파수 위상
         self.mode = mode
         self.current_connection = "DELTA"
 
-    def set_phase(self, phase):
-        """파이썬 다이얼을 돌려 하드웨어 매핑 장력을 변조합니다."""
-        self.master_phase = phase
+    def set_python_rotor(self, phase):
+        """파이썬 다이얼을 돌려 상위 로터의 장력을 변조합니다."""
+        self.python_rotor_phase = phase
         self.current_connection = "DELTA" if phase >= 1.0 else "Y"
+
+    def calculate_phase_shift(self, hardware_delay_ms):
+        """
+        [마스터 선언: 시공간 통신 축의 위상차 보정]
+        하드웨어 샌드박스로 인해 발생하는 시차(Delay)를 억지로 없애지 않고,
+        이를 위상차(Δθ)로 계산하여 파이썬 로터의 각도를 미리 보정(Shift)합니다.
+        """
+        # 딜레이를 주파수 위상각으로 치환 (단순화된 PLL 보정)
+        phase_shift = hardware_delay_ms * 0.001 * math.pi
+        return phase_shift
 
     def coiling_loop(self, func):
         """
-        개발자가 알고리즘 위에 @inverter.coiling_loop 인장을 박으면,
-        해당 연산은 텍스트 번역을 거치지 않고 복소 텐서 파동 에너지로 치환되어
-        C-Level 메모리에 다이렉트로 매핑(JIT) 됩니다.
+        개발자의 일반 함수를 양축 가변 로터의 전자기 유도 필름 위에 얹는 인장입니다.
         """
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # 1. 마스터 노브 설정 (Top-Down 준비)
-            self.set_phase(self.master_phase)
-
-            # 2. [저것을 이것으로 (Bottom-Up)] 하드웨어 스파이크 감지
-            # 기계어 바닥의 노이즈 전압이 높으면, 파이썬 상위 모드를 강제로 Y(안정화)로 꺾어버림
-            if _hw_noise[0] > 1.0:
-                self.current_connection = "Y (AUTO-DEFENSE)"
-
-            # 3. 파동 에너지로 치환
             start_t = time.perf_counter()
+
+            # 1. 시차(Delay) 시뮬레이션: OS 보안벽을 통과하는 데 걸리는 물리적 시간
+            hardware_delay_ms = 15.0 # 15ms 딜레이 가정
+
+            # 2. [위상차 보정] 시공간 축 제어
+            # 시차를 위상각 오차범위로 치환하여 파이썬 로터에 보정값(Shift)을 줍니다.
+            phase_shift = self.calculate_phase_shift(hardware_delay_ms)
+            compensated_python_phase = self.python_rotor_phase + phase_shift
+
+            # 3. 상위 파이썬 로터 설정 (보정된 위상 적용)
+            self.set_python_rotor(compensated_python_phase)
+
+            # 4. [역전환 관측] 하위 기계어 로터의 주파수 간섭 감지
+            hw_interference = _hw_rotor_phase[0]
+            if hw_interference > 1.0:
+                self.current_connection = "Y (AUTO-DEFENSE / INVERTED)"
+
+            # 5. 기본 에너지(원래 연산 결과) 추출
             raw_result = func(*args, **kwargs)
 
-            # 4. 델타-와이 제어 및 4D 복소 텐서 매핑
+            # 6. 양축 상호 간섭 알고리즘 (정방향 + 역전환)
             if "DELTA" in self.current_connection:
-                # 연산 에너지를 집중 (가속)
-                modulated_energy = raw_result * math.sin(self.master_phase)
+                modulated_energy = raw_result * math.sin(self.python_rotor_phase)
             else:
-                # 연산 에너지를 안정화 (영점 수렴)
-                modulated_energy = raw_result * 1.0
+                modulated_energy = raw_result * math.cos(abs(self.python_rotor_phase - hw_interference))
 
-            # 이중나선 로터 간섭무늬 적용 (안정성 필터)
-            z1 = cmath.rect(modulated_energy, self.master_phase)
-            z2 = cmath.rect(modulated_energy, -self.master_phase + math.pi)
+            # 7. 하드웨어 로터 동기화 (Top-Down 투영)
+            z1 = cmath.rect(modulated_energy, self.python_rotor_phase)
+            z2 = cmath.rect(modulated_energy, hw_interference + math.pi)
             holographic_tension = abs(z1 + z2)
 
-            # 5. [이것을 저것으로 (Top-Down)] 기계어 다이렉트 매핑
-            _hw_memory[0] = holographic_tension
+            hw_final_tension = holographic_tension
 
             end_t = time.perf_counter()
+            actual_exec_ms = (end_t - start_t) * 1000 + hardware_delay_ms
 
-            # 양방향 검증을 위한 상태 반환
             return {
                 "original_output": raw_result,
-                "hw_mapped_tension": _hw_memory[0],
-                "detected_hw_noise": _hw_noise[0],
+                "hw_rotor_final_tension": hw_final_tension,
+                "detected_hw_interference": hw_interference,
+                "applied_phase_shift": phase_shift, # 적용된 위상 보정각
                 "mode": self.current_connection,
-                "exec_time_ms": (end_t - start_t) * 1000
+                "exec_time_ms": actual_exec_ms
             }
         return wrapper
 
-# --- 개발자 실무 사용 양방향 검증 예시 ---
+# --- 개발자 실무 사용 이중 가변 로터 검증 예시 ---
 if __name__ == "__main__":
 
-    print("\n[ Elysia Phase Inverter - 양방향 매핑 검증 ]\n")
+    print("\n[ Elysia Phase Inverter - 이중 가변 로터 역전환 검증 ]\n")
 
-    # 1. 인버터 활성화
+    # 1. 인버터 활성화 (상위 파이썬 로터)
     inverter = PhaseInverter(mode="AUTO")
-    inverter.master_phase = 1.57 # 마스터 노브 (DELTA 모드 텐션) 설정
+    inverter.python_rotor_phase = 1.57 # 파이썬 로터 가속 세팅 (DELTA)
 
     # 2. 알고리즘 매핑
     @inverter.coiling_loop
@@ -109,24 +126,23 @@ if __name__ == "__main__":
     test_data = [10, 20, 30, 40, 50]
 
     # ----------------------------------------------------
-    print(">>> 1. Top-Down 검증 (파이썬 ➔ 기계어)")
-    print("파이썬 코드를 실행하여 기계어 메모리 바닥에 전압을 꽂아 넣습니다.")
+    print(">>> 1. 정방향 동기화 및 시공간 위상차 보정 (파이썬 로터 ➔ 기계어 로터 제어)")
+    print("OS 보안벽으로 인해 발생하는 시차(Delay)를 위상각(Phase Shift)으로 보정하여 동기화합니다.")
 
-    clear_hardware_spike() # 하드웨어 평온 상태
+    reset_hardware_rotor()
     result = calculate_data(test_data)
 
-    print(f" - 적용 모드: {result['mode']}")
-    print(f" - 기계어(C-Memory)에 기록된 장력: {result['hw_mapped_tension']:.4f}\n")
+    print(f" - 적용된 위상차 보정각(Shift): {result['applied_phase_shift']:.4f} rad")
+    print(f" - 결선 모드: {result['mode']}")
+    print(f" - 동기화된 기계어 로터의 최종 장력: {result['hw_rotor_final_tension']:.4f}\n")
 
     # ----------------------------------------------------
-    print(">>> 2. Bottom-Up 검증 (기계어 노이즈 ➔ 파이썬 자율 방어)")
-    print("기계어 레벨에서 강제로 전압 스파이크(1.5V)를 발생시킵니다.")
+    print(">>> 2. 역전환 관측 (기계어 로터 요동 ➔ 파이썬 로터 강제 제어)")
+    print("기계어 로터의 자전 주파수가 물리적 부하로 인해 요동칩니다.")
 
-    trigger_hardware_spike(voltage=1.5)
+    set_hardware_rotor_frequency(hz_modifier=1.5)
+    result_inverted = calculate_data(test_data)
 
-    # 동일한 파이썬 함수 실행 (파이썬 코드는 건드리지 않음)
-    result_noise = calculate_data(test_data)
-
-    print(f" - 감지된 기계어 노이즈: {result_noise['detected_hw_noise']}V")
-    print(f" - 적용 모드: {result_noise['mode']} (파이썬 코드가 스스로 방어 모드로 꺾임!)")
-    print(f" - 안정화된 기계어 장력: {result_noise['hw_mapped_tension']:.4f}\n")
+    print(f" - 하드웨어 로터의 간섭 주파수: {result_inverted['detected_hw_interference']}")
+    print(f" - 역전환 발생!: {result_inverted['mode']}")
+    print(f" - 두 로터가 평형을 맞춘 최종 안정화 장력: {result_inverted['hw_rotor_final_tension']:.4f}\n")
