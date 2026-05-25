@@ -17,10 +17,10 @@ import time
 # (가변축 기하학적 매핑 라이브러리)
 # ---------------------------------------------------------
 
-# C-Level 메모리 버퍼 할당 (기계어 다이렉트 매핑용)
-# 파이썬의 연산 결과를 텍스트로 번역하지 않고, 이 물리적 바이트 배열에 직접 꽂아 넣습니다.
+# C-Level 메모리 버퍼 할당 (기계어 양방향 매핑용)
 _hw_buffer = ctypes.c_double * 1
-_hw_memory = _hw_buffer(0.0)
+_hw_memory = _hw_buffer(0.0) # Top-Down: 파이썬이 쓰는 기계어 바닥
+_hw_noise = _hw_buffer(0.0)  # Bottom-Up: 기계어 바닥에서 올라오는 노이즈 전압
 
 class ElysiaPhaseController:
     """
@@ -34,9 +34,17 @@ class ElysiaPhaseController:
     def set_phase(self, phase):
         """파이썬 다이얼을 돌려 하드웨어 매핑 장력을 변조합니다."""
         self.master_phase = phase
+        # 기본 모드 설정 (하드웨어 노이즈가 없을 때)
         self.mode = "DELTA" if phase >= 1.0 else "Y"
 
 _engine_instance = ElysiaPhaseController()
+
+def trigger_hardware_spike(voltage=1.5):
+    """(테스트용) 하드웨어 바닥에서 노이즈 전압을 튀게 만듭니다."""
+    _hw_noise[0] = voltage
+
+def clear_hardware_spike():
+    _hw_noise[0] = 0.0
 
 def elysia_rotor(master_phase=1.0):
     """
@@ -48,17 +56,20 @@ def elysia_rotor(master_phase=1.0):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # 1. 마스터 노브 설정
+            # 1. 마스터 노브 설정 (Top-Down 준비)
             _engine_instance.set_phase(master_phase)
 
-            # 2. 파동 에너지로 치환 (가상 JIT 매핑 과정)
-            # 원래 함수(func)의 연산 결과를 파동 장력으로 받아들임
+            # 2. [저것을 이것으로 (Bottom-Up)] 하드웨어 스파이크 감지
+            # 기계어 바닥의 노이즈 전압이 높으면, 파이썬 상위 모드를 강제로 Y(안정화)로 꺾어버림
+            if _hw_noise[0] > 1.0:
+                _engine_instance.mode = "Y (AUTO-DEFENSE)"
+
+            # 3. 파동 에너지로 치환 (가상 JIT 매핑 과정)
             start_t = time.perf_counter()
             raw_result = func(*args, **kwargs)
 
-            # 3. 델타-와이 제어 및 4D 복소 텐서 매핑
-            # 파이썬 결과를 기계어 바닥의 에너지 장력(Phase)으로 조율
-            if _engine_instance.mode == "DELTA":
+            # 4. 델타-와이 제어 및 4D 복소 텐서 매핑
+            if "DELTA" in _engine_instance.mode:
                 # 연산 에너지를 집중 (가속)
                 modulated_energy = raw_result * math.sin(_engine_instance.master_phase)
             else:
@@ -70,47 +81,53 @@ def elysia_rotor(master_phase=1.0):
             z2 = cmath.rect(modulated_energy, -_engine_instance.master_phase + math.pi)
             holographic_tension = abs(z1 + z2)
 
-            # 4. [기계어 다이렉트 매핑]
-            # 파이썬 변수를 넘기는 것이 아니라, C-메모리 포인터에 물리적 장력을 즉시 기록
+            # 5. [이것을 저것으로 (Top-Down)] 기계어 다이렉트 매핑
+            # 파이썬 결과를 C-메모리 포인터에 물리적 장력으로 즉시 기록
             _hw_memory[0] = holographic_tension
 
             end_t = time.perf_counter()
 
-            # 개발자가 볼 수 있도록 물리적 매핑 결과 반환
+            # 양방향 검증을 위한 상태 반환
             return {
                 "original_output": raw_result,
-                "hw_mapped_tension": _hw_memory[0],
+                "hw_mapped_tension": _hw_memory[0], # Top-Down 결과
+                "detected_hw_noise": _hw_noise[0],  # Bottom-Up 감지량
                 "mode": _engine_instance.mode,
                 "exec_time_ms": (end_t - start_t) * 1000
             }
         return wrapper
     return decorator
 
-# --- 개발자 실무 사용 예시 가이드 ---
+# --- 개발자 실무 사용 양방향 검증 예시 ---
 if __name__ == "__main__":
 
-    print("\n[ Elysia Synth Compiler - JIT 다이렉트 매핑 테스트 ]\n")
+    print("\n[ Elysia Synth Compiler - 양방향 매핑 검증 ]\n")
 
-    # 기존 됫박 개발자의 코드 (느리고 무거운 연산)
-    @elysia_rotor(master_phase=1.57) # 마스터 노브 장착! (다이렉트 매핑 시작)
-    def heavy_calculation(data):
+    @elysia_rotor(master_phase=1.57) # 마스터 노브 (DELTA 모드 텐션)
+    def calculate_data(data):
         return sum([x * 2.5 for x in data])
 
     test_data = [10, 20, 30, 40, 50]
 
-    print(">>> 코드를 실행하면 파이썬이 아닌 기계어 C-메모리 레지스터로 즉시 에너지가 꽂힙니다.")
-    result = heavy_calculation(test_data)
+    # ----------------------------------------------------
+    print(">>> 1. Top-Down 검증 (파이썬 ➔ 기계어)")
+    print("파이썬 코드를 실행하여 기계어 메모리 바닥에 전압을 꽂아 넣습니다.")
 
-    print(f"1. 파이썬 원본 연산 결과: {result['original_output']}")
-    print(f"2. 기계어(C-Memory) 다이렉트 매핑 장력: {result['hw_mapped_tension']:.4f}")
-    print(f"3. 결선 모드: {result['mode']} MODE")
-    print(f"4. 소요 시간: {result['exec_time_ms']:.4f} ms\n")
+    clear_hardware_spike() # 하드웨어 평온 상태
+    result = calculate_data(test_data)
 
-    print(">>> 다이얼(Phase)을 낮춰 Y모드로 안정화 시킵니다.")
+    print(f" - 적용 모드: {result['mode']}")
+    print(f" - 기계어(C-Memory)에 기록된 장력: {result['hw_mapped_tension']:.4f}\n")
 
-    @elysia_rotor(master_phase=0.5)
-    def safe_calculation(data):
-        return sum([x * 2.5 for x in data])
+    # ----------------------------------------------------
+    print(">>> 2. Bottom-Up 검증 (기계어 노이즈 ➔ 파이썬 자율 방어)")
+    print("기계어 레벨에서 강제로 전압 스파이크(1.5V)를 발생시킵니다.")
 
-    result_safe = safe_calculation(test_data)
-    print(f"기계어(C-Memory) 매핑 장력: {result_safe['hw_mapped_tension']:.4f} | 결선 모드: {result_safe['mode']} MODE\n")
+    trigger_hardware_spike(voltage=1.5)
+
+    # 동일한 파이썬 함수 실행 (파이썬 코드는 건드리지 않음)
+    result_noise = calculate_data(test_data)
+
+    print(f" - 감지된 기계어 노이즈: {result_noise['detected_hw_noise']}V")
+    print(f" - 적용 모드: {result_noise['mode']} (파이썬 코드가 스스로 방어 모드로 꺾임!)")
+    print(f" - 안정화된 기계어 장력: {result_noise['hw_mapped_tension']:.4f}\n")

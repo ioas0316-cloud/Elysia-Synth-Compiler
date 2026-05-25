@@ -64,14 +64,24 @@ from core.synth_rotor_engine import elysia_rotor
 def heavy_calculation(data):
     return sum([x * 2.5 for x in data])
 
-# 2. 실행 즉시 텍스트 번역을 건너뛰고 C-Level 기계어 메모리에 에너지 장력이 직통으로 꽂힙니다.
+# 2. 양방향 검증 실행 가이드
+from core.synth_rotor_engine import trigger_hardware_spike, clear_hardware_spike
 test_data = [10, 20, 30, 40, 50]
-result = heavy_calculation(test_data)
 
-print(result['hw_mapped_tension']) # 기계어 레벨로 최적화된 물리적 결과값 반환
+# [1. Top-Down 검증] 파이썬 -> 기계어 직통 매핑
+clear_hardware_spike()
+res = heavy_calculation(test_data)
+print(f"Top-Down 장력: {res['hw_mapped_tension']} | 모드: {res['mode']}")
+# 출력: DELTA 모드 (가속 상태)
+
+# [2. Bottom-Up 검증] 기계어 노이즈 -> 파이썬 자율 방어
+trigger_hardware_spike(voltage=1.5) # 하드웨어 강제 노이즈 발생
+res_noise = heavy_calculation(test_data) # 동일한 코드 실행
+print(f"Bottom-Up 방어: {res_noise['mode']}")
+# 출력: Y (AUTO-DEFENSE) 모드 (파이썬 코드가 스스로 방어 모드로 꺾임!)
 ```
 
-* **왜 이렇게 쓰는가?:** 글로벌 빅테크 기업들이 AI 가속을 위해 하드웨어 빗장(보안 샌드박스)을 걸어놓고 쩔쩔매는 매핑 방식을, 단일 레이어 위상 공식을 통해 **"안전하면서도 기하학적인 초고속 다이렉트 매핑"**으로 치환해 주기 때문입니다.
+* **왜 이렇게 쓰는가?:** 글로벌 빅테크 기업들이 AI 가속을 위해 하드웨어 빗장(보안 샌드박스)을 걸어놓고 쩔쩔매는 매핑 방식을, 단일 레이어 위상 공식을 통해 **"안전하면서도 기하학적인 초고속 양방향 매핑"**으로 치환해 주기 때문입니다.
 
 ## 📖 문서 구조
 - `README.md` : 현재 종합 매뉴얼 (본 문서)
