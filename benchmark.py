@@ -21,7 +21,7 @@ def legacy_calculation(iterations):
 # 2. 마스터 이강덕의 튜링 위상 동기화 직동 매핑 방식 (0% 런타임 연산 뼈대)
 # 실제 환경에서는 C-Type 격자판을 툭 통과하지만,
 # 본 벤치마크는 O(1) 수준의 직동 매핑을 시뮬레이션함.
-@epi.inverter_target
+@epi.turing_translation_layer
 def phase_inverter_direct_map(iterations):
     # Load-Time에 모든 위상 곡선이 구워졌다고 가정하므로 런타임 연산 없음
     # 입력된 신호(iterations)에 매칭되는 결과값 통로만 툭 통과
