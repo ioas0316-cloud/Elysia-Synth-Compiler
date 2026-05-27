@@ -1,6 +1,7 @@
 # Copyright 2026 Lee Kang-deok (이강덕)
 # All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License")
+# you may not use this file except in compliance with the License.
 # Elysia Absolute Axiom Implementation (Phase Inverter Translation Matrix)
 
 import time

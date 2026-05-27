@@ -4,6 +4,11 @@
 
 import time
 import random
+import os
+import sys
+
+# Ensure lib can be found
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from lib.wave_tensor import WaveTensor
 
 def demo_financial_stream():
