@@ -29,6 +29,7 @@
 
 모든 기록은 **[작은 공방의 기록 (INDEX)](INDEX.md)**을 통해 살펴볼 수 있습니다.
 - **[상자 없는 위상인버터의 증명: 리부트 명세서 (REBOOT_SPEC)](docs/REBOOT_SPEC.md)**
+- **[위상인버터 사용 설명서 및 벤치마크 평가서 (MANUAL & BENCHMARK)](docs/MANUAL_AND_BENCHMARK.md)**
 - **[첫 번째 서랍: 내 책상 위의 소리굽쇠 (RESCUE_INVERTER_GUIDE)](docs/RESCUE_INVERTER_GUIDE.md)**
 - **[두 번째 서랍: 장인의 도구함 (ARCHITECTURE)](docs/ARCHITECTURE.md)**
 - **[세 번째 서랍: 공방의 과거와 비전 (APPLICATIONS)](docs/APPLICATIONS.md)**
