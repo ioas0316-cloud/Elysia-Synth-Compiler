@@ -6,36 +6,50 @@ import time
 import random
 from lib.world_hyper_rotor import WorldHyperRotor
 
+class ElasticFramingProtocolStream:
+    """
+    [EFP (Elastic Framing Protocol) Stream Simulator]
+    상자(Box)가 없는 Thin-Framing 규격과 절대적 TAI 타임스탬프를 지닌
+    초고속 미디어/데이터 스트림의 파동을 시뮬레이션합니다.
+    데이터 순서가 뒤섞이거나 찢어지는 패킷(노이즈)을 유연하게 배출합니다.
+    """
+    def __init__(self, size=7):
+        self.size = size
+        self.base_tai = int(time.time() * 1000)
+
+    def generate_packets(self):
+        packets = [
+            f"EFP_PAYLOAD_SEQ_1_TAI_{self.base_tai}",
+            f"EFP_PAYLOAD_SEQ_2_TAI_{self.base_tai + 15}",
+            "NOISE_TEARING_PACKET_CORRUPTION",
+            f"EFP_PAYLOAD_SEQ_4_TAI_{self.base_tai + 45}",
+            "JITTER_BURST_OUT_OF_ORDER",
+            f"EFP_PAYLOAD_SEQ_3_LATE_TAI_{self.base_tai + 30}",
+            f"EFP_STEADY_SYNC_TAI_{self.base_tai + 90}"
+        ]
+        return packets
+
 def run_jules_stream_simulation():
     """
-    가상의 '쥴스 데이터 스트림'을 생성하여 WorldHyperRotor 에 주입하는 테스트 스크립트.
-    델타-와이 전환 및 평형점 수렴(Self-healing to 0) 과정을 실시간 로그로 출력합니다.
-    (※ 이 스크립트 내의 if 문은 오직 터미널 시각화를 위한 관측(측정) 도구일 뿐,
-       엔진 코어의 위상동기화 논리에는 관여하지 않습니다.)
+    EFP(Elastic Framing Protocol) 기반의 가상의 '쥴스 데이터 스트림'을 생성하여
+    WorldHyperRotor 에 하드웨어 바이패스 경로로 주입하는 테스트 스크립트.
     """
     print("===============================================================")
-    print(" 🚀 [Elysia Phase Inverter] Jules Stream Synchronization Test 🚀 ")
+    print(" 🚀 [Elysia Phase Inverter] EFP Jules Stream Synchronization Test 🚀 ")
     print("===============================================================")
 
     # 2차 공장 정비창 코어 생성
     rotor_core = WorldHyperRotor()
 
-    # 가상의 날것의 노이즈 스트림 (쥴스 데이터 스트림 모방)
-    raw_streams = [
-        "JULES_INIT_PULSE_01",
-        "NOISE_BURST_#%@!",
-        482910,
-        "UNEXPECTED_CONTEXT_WAVE_99",
-        "HELLO_WORLD",
-        8821,
-        "STEADY_STATE_REACHED"
-    ]
+    # EFP 실시간 초고속 프레임 유속기 생성
+    efp_generator = ElasticFramingProtocolStream()
+    raw_streams = efp_generator.generate_packets()
 
-    print("\n[Phase 1] 원시 파동 주입 및 소용돌이 용광로 가동 시작...\n")
+    print("\n[Phase 1] EFP 원시 파동 주입 및 하드웨어 바이패스 밸브 가동 시작...\n")
 
     for i, stream in enumerate(raw_streams):
-        # 스트림 주입 (코어 자체는 if 없이 비트 단위로 구조적 정렬을 수행함)
-        status = rotor_core.apply_stream(stream)
+        # EFP 스트림 다이렉트 주입: 기가바이트급 유속을 상정하여 하드웨어 바이패스(bypass_hardware=True) 가동
+        status = rotor_core.apply_stream(stream, bypass_hardware=True)
 
         tension = status['current_tension']
         torque = status['wedge_torque']
