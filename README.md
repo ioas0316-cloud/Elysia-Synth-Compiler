@@ -28,6 +28,7 @@
 이 도구가 어떻게 만들어졌고, 어떻게 쓰이는지에 대한 기록은 서랍별로 정돈되어 있습니다. 가장 쉬운 첫 번째 서랍부터 열어보십시오.
 
 모든 기록은 **[작은 공방의 기록 (INDEX)](INDEX.md)**을 통해 살펴볼 수 있습니다.
+- **[상자 없는 위상인버터의 증명: 리부트 명세서 (REBOOT_SPEC)](docs/REBOOT_SPEC.md)**
 - **[첫 번째 서랍: 내 책상 위의 소리굽쇠 (RESCUE_INVERTER_GUIDE)](docs/RESCUE_INVERTER_GUIDE.md)**
 - **[두 번째 서랍: 장인의 도구함 (ARCHITECTURE)](docs/ARCHITECTURE.md)**
 - **[세 번째 서랍: 공방의 과거와 비전 (APPLICATIONS)](docs/APPLICATIONS.md)**
