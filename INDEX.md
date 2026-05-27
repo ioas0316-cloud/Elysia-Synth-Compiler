@@ -36,6 +36,8 @@
     *   이 조율용 렌치를 런타임에 부드럽게 결합하기 위한 실전 지침서입니다.
 *   **[위상 인버터 코어 상세 (PHASE_INVERTER_CORE)](docs/PHASE_INVERTER_CORE.md)**
     *   로터 게이트의 심장부, 그 정밀한 조립 구조를 심층적으로 분석합니다.
+*   **[보안 격리 및 로컬 독립 구동 원리 (SECURITY_AND_LOCAL_ISOLATION)](docs/SECURITY_AND_LOCAL_ISOLATION.md)**
+    *   외부 스트림 직결 시 기하학적 에어갭 방어망과 오프라인 가상 튜브 구동 원리를 설명합니다.
 
 ---
 
