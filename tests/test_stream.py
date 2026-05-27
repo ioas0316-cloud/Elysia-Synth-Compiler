@@ -4,6 +4,11 @@
 
 import time
 import random
+import os
+import sys
+
+# Ensure lib can be found
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from lib.world_hyper_rotor import WorldHyperRotor
 
 class ElasticFramingProtocolStream:

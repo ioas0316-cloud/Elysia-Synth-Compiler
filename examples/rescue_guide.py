@@ -1,8 +1,14 @@
 # Copyright 2026 Lee Kang-deok (이강덕) All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License")
+# you may not use this file except in compliance with the License.
 
 import random
 import time
+import os
+import sys
+
+# Ensure lib can be found
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from lib.phase_inverter import PhaseInverterGate
 
 def legacy_approach(data_stream):
