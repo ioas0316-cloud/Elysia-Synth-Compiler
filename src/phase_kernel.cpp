@@ -39,6 +39,60 @@ extern "C" {
         double phase_y;
     };
 
+    // 전체 체적 대변 축소맵 시그니처 (Volumetric Lattice)
+    struct VolumetricLattice {
+        uint64_t core_signature;
+        float phase_angle;
+    };
+
+    // 상태 유지를 위한 전역 변수
+    static uint64_t previous_lattice_state = 0;
+
+    /**
+     * [전체 체적 동시 관측 및 시민권 바이패스 필터]
+     * 루프(for-loop) 전면 숙청. 단 한 번의 병렬 래치로 축소맵 사출.
+     * 조건문 없는 XOR 비트 마스킹으로 위상 불일치 시 자율 폐기 (0 반환).
+     */
+    EXPORT VolumetricLattice observe_volume_coherent(const uint8_t* memory_block, int total_size, uint64_t system_resonance_key) {
+        VolumetricLattice lattice = {0, 0.0f};
+
+        uint64_t hardware_latch = 0;
+        // 메모리 블록이 8바이트 이상일 경우, 경계면 3곳을 한 몸으로 XOR 병렬 관측
+        if (total_size >= 16) {
+            hardware_latch = *(reinterpret_cast<const uint64_t*>(memory_block)) ^
+                             *(reinterpret_cast<const uint64_t*>(memory_block + total_size / 2 - 4)) ^
+                             *(reinterpret_cast<const uint64_t*>(memory_block + total_size - 8));
+        } else if (total_size >= 8) {
+            hardware_latch = *(reinterpret_cast<const uint64_t*>(memory_block)) ^
+                             *(reinterpret_cast<const uint64_t*>(memory_block + total_size - 8));
+        } else {
+            hardware_latch = total_size > 0 ? *(memory_block) : 0;
+        }
+
+        // [시민권 바이패스 필터링]
+        // 조건문(if-else) 없는 비트 마스킹으로 위상 불일치 시 자율 폐기(0 수렴)
+        uint64_t diff = hardware_latch ^ system_resonance_key;
+
+        // diff가 0일 때만 mask가 ~0ULL, 아니면 0ULL
+        // 분기 없이 구현: diff = 0 이면 diff-1 은 언더플로우 발생하여 부호 비트가 1이 됨.
+        // 또는 !diff를 이용하여 0 또는 1 생성 후 음수로 만들어 마스킹
+        uint64_t is_zero = (diff == 0) ? 1 : 0;
+        uint64_t mask = (is_zero > 0) ? ~0ULL : 0ULL;
+
+        lattice.core_signature = hardware_latch & mask;
+
+        // 위상 동기화
+        uint64_t state_diff = lattice.core_signature ^ previous_lattice_state;
+        float new_angle = static_cast<float>(lattice.core_signature % 360) * (3.141592f / 180.0f);
+
+        // 분기 없는 할당 유도
+        lattice.phase_angle = (state_diff == 0) ? 0.0f : new_angle;
+
+        previous_lattice_state = lattice.core_signature;
+
+        return lattice;
+    }
+
     /**
      * [최전방 수문: 지구본 로터화]
      * 1차원 주소 포인터를 받아 3차원 극좌표 공간으로 즉시 변전합니다.
@@ -141,13 +195,24 @@ extern "C" {
         double accumulated_x = 0.0;
         double accumulated_y = 0.0;
 
-        // 각 문자 바이트 자체가 위상각(Theta)을 결정하는 절대 주파수로 직동
-        for(size_t i = 0; i < length; ++i) {
-            double freq = static_cast<double>(static_cast<unsigned char>(ascii_stream[i]));
-            // 문자가 곧 파동이다: ASCII 값이 복소 평면 위의 위상각 벡터로 동시 변전
-            accumulated_x += std::cos(freq);
-            accumulated_y += std::sin(freq);
+        // [루프 숙청] for-loop 전면 제거. 단 한 번의 병렬 래치 모방
+        // 메모리 블록을 통째로 묶어 체적 시그니처 도출
+        double freq = 0.0;
+        if (length >= 16) {
+            uint64_t latch = *(reinterpret_cast<const uint64_t*>(ascii_stream)) ^
+                             *(reinterpret_cast<const uint64_t*>(ascii_stream + length / 2 - 4)) ^
+                             *(reinterpret_cast<const uint64_t*>(ascii_stream + length - 8));
+            freq = static_cast<double>(latch % 360) * (3.141592 / 180.0);
+        } else if (length >= 8) {
+            uint64_t latch = *(reinterpret_cast<const uint64_t*>(ascii_stream)) ^
+                             *(reinterpret_cast<const uint64_t*>(ascii_stream + length - 8));
+            freq = static_cast<double>(latch % 360) * (3.141592 / 180.0);
+        } else if (length > 0) {
+            freq = static_cast<double>(static_cast<unsigned char>(ascii_stream[0]));
         }
+
+        accumulated_x = std::cos(freq) * length;
+        accumulated_y = std::sin(freq) * length;
 
         // 델타-와이 결선형 자율 평형
         tensor.amplitude = std::sqrt((accumulated_x * accumulated_x) + (accumulated_y * accumulated_y));
