@@ -32,6 +32,13 @@ extern "C" {
         double future_gravity;  // 미래 인력 곡률
     };
 
+    // ASCII-CUDA 공명 텐서
+    struct ResonanceTensor {
+        double amplitude;
+        double phase_x;
+        double phase_y;
+    };
+
     /**
      * [최전방 수문: 지구본 로터화]
      * 1차원 주소 포인터를 받아 3차원 극좌표 공간으로 즉시 변전합니다.
@@ -116,5 +123,37 @@ extern "C" {
         }
 
         return internal_rotor;
+    }
+
+    /**
+     * [ASCII-CUDA 하드웨어 직동 공명]
+     * 기성 파이썬 루프를 배제하고 문자열 바이트 전체를 한 번에 받아
+     * 각 문자의 아스키 값을 주파수로 삼아 복소 평면 위에서 간섭 공명을 일으킵니다.
+     * CUDA 코어 스레드의 동시성(Concurrent Resonance)을 모방한 C++ SIMD 타깃 수식입니다.
+     */
+    EXPORT ResonanceTensor compute_ascii_cuda_resonance(const char* ascii_stream, size_t length) {
+        ResonanceTensor tensor = {0.0, 0.0, 0.0};
+
+        if (length == 0 || ascii_stream == nullptr) {
+            return tensor;
+        }
+
+        double accumulated_x = 0.0;
+        double accumulated_y = 0.0;
+
+        // 각 문자 바이트 자체가 위상각(Theta)을 결정하는 절대 주파수로 직동
+        for(size_t i = 0; i < length; ++i) {
+            double freq = static_cast<double>(static_cast<unsigned char>(ascii_stream[i]));
+            // 문자가 곧 파동이다: ASCII 값이 복소 평면 위의 위상각 벡터로 동시 변전
+            accumulated_x += std::cos(freq);
+            accumulated_y += std::sin(freq);
+        }
+
+        // 델타-와이 결선형 자율 평형
+        tensor.amplitude = std::sqrt((accumulated_x * accumulated_x) + (accumulated_y * accumulated_y));
+        tensor.phase_x = accumulated_x / (tensor.amplitude + 1e-9);
+        tensor.phase_y = accumulated_y / (tensor.amplitude + 1e-9);
+
+        return tensor;
     }
 }
