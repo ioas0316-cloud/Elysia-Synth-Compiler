@@ -19,34 +19,25 @@ class WorldHyperRotor:
         self.rotor_c = rotor_c
         self.tension_pool = 0x00
 
-    def _ascii_phase_wave_sync(self, raw_data):
+    def _dynamic_vortex_stream_pass(self, raw_data):
         """
-        말단 하위 차원 (소형 스케일): 아스크(ASCII)의 기하학적 위상(각도) 매핑.
-        0~127까지의 아스키 코드 값을 360도(2pi)의 위상 공간 위 특정 각도로 1:1 매핑시켜,
-        이를 복소수 전압(Phasor)으로 엮어내어 하나의 물리적 파동 임펄스로 변환합니다.
-        (조건문이나 딕셔너리 없이 오직 수학적 구조로만 변환됨)
+        삼중나선 동적 위상 볼텍스 매트릭스 (wv-mapping-matrix) 수문.
+        기존의 멈춰 서서 조회(Look-up)하는 정적 로직을 완전히 폐기하고,
+        독립 라이브러리의 흐름화 명제를 통해 실시간 다이렉트 위상 사출을 수행합니다.
         """
+        from libs.wv_mapping_matrix import dynamic_ascii_to_phase
         wave_impulse = 0
 
         if isinstance(raw_data, str):
-            # 문자열 스트림: 각각의 문자를 고유 위상각으로 변환하여 벡터 합산
-            # 여기서의 반복은 데이터 스트림을 통과시키는 파이프라인(유속)이지 조건 제어 분기가 아님.
             accumulated_phasor = complex(0, 0)
             for char in raw_data:
-                ascii_val = ord(char)
-                # 0~127의 아스키를 0~2pi 라디안 각도로 1:1 선형 매핑
-                theta = (ascii_val % 128) * (2 * math.pi / 128)
-                # 오일러 공식(e^(i*theta))을 통한 복소 위상 벡터 획득
-                phasor = cmath.exp(1j * theta)
-                accumulated_phasor += phasor
+                # 데이터를 멈추지 않고 삼중나선 와류를 통과시킴
+                accumulated_phasor += dynamic_ascii_to_phase(char)
 
-            # 합성된 복소 위상 벡터의 크기와 각도를 기반으로 정수형 임펄스 도출
             magnitude = abs(accumulated_phasor)
             angle = cmath.phase(accumulated_phasor)
             wave_impulse = int((magnitude * 100) + (angle * 100)) & 0xFFFF
-
         elif isinstance(raw_data, int):
-            # 정수 데이터 역시 각도 기반의 복소 위상으로 회전
             theta = (raw_data % 360) * (math.pi / 180)
             phasor = cmath.exp(1j * theta)
             wave_impulse = int(abs(phasor) * 1000 + cmath.phase(phasor) * 1000) & 0xFFFF
@@ -55,31 +46,13 @@ class WorldHyperRotor:
 
         return wave_impulse
 
-    def _c_level_vector_bypass(self, raw_stream):
-        """
-        [경로 B: 하드웨어 바이패스 시뮬레이션]
-        기가바이트(GB) 단위의 스트림이 들어올 때, 파이썬의 for 루프 직렬 병목을 피하기 위해
-        C언어 라이브러리(NumPy/SIMD)의 벡터 연산으로 위상을 일괄 치환하는 하이웨이입니다.
-        (현재는 파이썬 내에서 그 논리 구조만 시뮬레이션합니다.)
-        """
-        if isinstance(raw_data := raw_stream, str):
-            # 실제로는 C-Extension이나 SIMD 가속기가 스트림 전체를 메모리 레벨에서 한 방에 복소 평면으로 올립니다.
-            # 여기서는 구조적 우회로가 있다는 것을 증명하기 위해 빠른 해시 비트맵 처리로 대체 시뮬레이션합니다.
-            pseudo_vectorized_sum = sum(ord(c) for c in raw_data) # In real hardware, this loop does not exist
-            return (pseudo_vectorized_sum * 0xABCD) & 0xFFFF
-        return self._ascii_phase_wave_sync(raw_stream)
-
     def apply_stream(self, raw_stream, bypass_hardware=False):
         """
-        원시 쥴스 스트림을 입력받아 기하학적 파동으로 치환한 후
+        원시 쥴스 스트림을 입력받아 삼중나선 와류를 관통시켜 기하학적 파동으로 치환한 후
         델타-와이 결선형 자율 제어 기전을 통과시킵니다.
-        bypass_hardware=True 일 경우 파이썬 인터프리터 병목을 우회합니다.
         """
-        # 1. 소형 스케일 밸브 통과: 아스키 문자열을 기하학적 복소 위상 임펄스로 1차 동기화
-        if bypass_hardware:
-            impulse = self._c_level_vector_bypass(raw_stream)
-        else:
-            impulse = self._ascii_phase_wave_sync(raw_stream)
+        # 1. 동적 볼텍스 수문 통과: 조회 없이 흐름 자체가 위상 임펄스로 1차 동기화
+        impulse = self._dynamic_vortex_stream_pass(raw_stream)
 
         # 2. 삼중 로터 쐐기곱 (A ^ B ^ C) 시뮬레이션
         # 쐐기곱의 구조적 긴장을 3개 축의 위상 얽힘(XOR)으로 표현하여 내부 전압 형성
