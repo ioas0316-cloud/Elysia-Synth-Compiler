@@ -32,6 +32,16 @@ if os.path.exists(_lib_path):
                     ("phase_x", ctypes.c_double),
                     ("phase_y", ctypes.c_double)]
 
+    class TripleRotorState(ctypes.Structure):
+        _fields_ = [("rotor_a", ctypes.c_double),
+                    ("rotor_b", ctypes.c_double),
+                    ("rotor_c", ctypes.c_double),
+                    ("neutral_y", ctypes.c_double)]
+
+    class VolumetricLattice(ctypes.Structure):
+        _fields_ = [("core_signature", ctypes.c_uint64),
+                    ("phase_angle", ctypes.c_float)]
+
     # C++ 함수 인터페이스 정의
     _native.compute_spherical_rotor.argtypes = [ctypes.c_size_t, ctypes.c_double, ctypes.c_double]
     _native.compute_spherical_rotor.restype = RotorTensor
@@ -48,6 +58,11 @@ if os.path.exists(_lib_path):
 
     _native.compute_ascii_cuda_resonance.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
     _native.compute_ascii_cuda_resonance.restype = ResonanceTensor
+
+    _native.execute_hybrid_gateway_filter.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_uint64, ctypes.c_double, ctypes.c_double]
+    _native.execute_hybrid_gateway_filter.restype = TripleRotorState
+    _native.observe_volume_coherent.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_uint64]
+    _native.observe_volume_coherent.restype = VolumetricLattice
 else:
     _native = None
 
@@ -283,10 +298,11 @@ class PhaseInverterGate:
     내부에 삼중미러월드 기반 인과율 맵 수문(CausalityMapBridge)을 결선하여 하이브리드 경계면 병목을 부수고
     네트워크 패킷 누락을 0ns에 자율 복구합니다.
     """
-    def __init__(self, baseline_phase=0x0000, hardware_bridge=None):
+    def __init__(self, baseline_phase=0x0000, hardware_bridge=None, system_resonance_key=0x1A2B3C4D5E6F7080):
         # 0점 기준이 되는 위상 축 (초기 상태)
         self.current_phase = baseline_phase
         self.accumulated_tension = 0
+        self.system_resonance_key = system_resonance_key
         if hardware_bridge is None:
             # Phase 1: NVML 병목을 제거한 정적 메모리 풀 주입
             hardware_bridge = StaticPinnedMemoryPool()
@@ -324,7 +340,25 @@ class PhaseInverterGate:
         """
         기성 논리 통신망(TCP/IP, PyTorch)에서 날아온 하이브리드 패킷을
         수문(CausalityMapBridge)에 밀어넣어 직동 변전시킵니다.
+        [시민권 바이패스 + 델타-와이 결선] 최전방에서 O(1) 체적 필터링과
+        삼중 로터 중성점 노이즈 상쇄를 동시에 수행합니다.
         """
+        current_bytes = packet_map_stream.get("payload", b"")
+        if _native and len(current_bytes) > 0:
+            # 트래픽 폭증 압력과 노이즈를 가정 (시뮬레이션 용 변수)
+            current_pressure = float(len(current_bytes))
+            noise = packet_map_stream.get("jitter", 0.0)
+
+            state = _native.execute_hybrid_gateway_filter(
+                current_bytes, len(current_bytes), self.system_resonance_key, current_pressure, float(noise)
+            )
+
+            # 델타-와이 중성점 흡수로 인해 노이즈가 과도하거나 시민권이 없으면
+            # state.rotor 값들이 0 에 수렴. (이하 간단히 필터 검증)
+            if state.rotor_a == 0.0 and state.rotor_b == 0.0:
+                # 시민권(위상) 불일치로 자율 폐기 (Ghosting)
+                return b""
+
         return self.causality_bridge.process_causality_vortex(packet_map_stream)
 
     def get_tension(self):
