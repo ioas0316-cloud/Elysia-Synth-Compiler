@@ -83,6 +83,8 @@ Elysia-Phase-Inverter/ (공방 본부)
     ├── APPLICATIONS.md
     ├── ARCHITECTURE.md
     ├── BENCHMARK_REPORT.md
+    ├── REAL_METRICS_REPORT.md
+    ├── ROADMAP.md
     ├── DEVELOPER_GUIDE.md
     ├── MANUAL_AND_BENCHMARK.md
     ├── PHASE_INVERTER_CORE.md
@@ -107,4 +109,4 @@ Elysia-Phase-Inverter/ (공방 본부)
 *   **[응용 방향성 (APPLICATIONS)](docs/APPLICATIONS.md)**
     *   단순한 최적화를 넘어 금융 트레이딩, 로보틱스, 네트워크 방화벽 등 거침없이 흐르는 시스템을 조율해 나가는 새로운 비전.
 *   **[벤치마크 리포트 (BENCHMARK_REPORT)](docs/BENCHMARK_REPORT.md)**
-    *   가변 파동 구조가 레거시 분기문을 얼마나 압도적으로 찜 쪄 먹는지 보여주는 솔직한 실전 기록 (최적화/안정성 4대 지표 수치화). 단순 철학을 넘어 하드웨어를 통제하는 물리적 증거를 확인하십시오.
+    *   가변 파동 구조가 레거시 분기문을 얼마나 압도적으로 찜 쪄 먹는지 보여주는 솔직한 실전 기록 (최적화/안정성 지표 수치화). 장단점과 직렬 네트워크 하드웨어의 물리적 한계점, 그리고 가변 스케일 수문을 통한 구조적 극복 로드맵을 건조한 공학적 잣대로 제시합니다. 단순 철학을 넘어 하드웨어를 통제하는 물리적 증거를 확인하십시오.
