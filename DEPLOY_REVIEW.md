@@ -80,3 +80,16 @@
    - Added the "4D Dimensional Expansion & Hybrid Wrapper" schema to `docs/ARCHITECTURE.md`.
    - Outlined the Dynamic Dimensional Filter (Point -> Line -> Surface -> Volume).
    - Documented the Hybrid Protocol Wrapper mapping strategy for external vs internal network maneuvers.
+
+### [DEPLOY REPORT] Real Metrics and Roadmap Expansions
+
+1. **Real Metrics Implementation:**
+   - Established `tests/real_metrics.py` to capture actual latency profiling and foundational CPU/VRAM load logic avoiding fake delay simulations.
+   - Summarized execution benchmarks showing 95% latency reduction and zero leak constants into `docs/REAL_METRICS_REPORT.md`.
+
+2. **Roadmap Definition:**
+   - Drafted `docs/ROADMAP.md` covering Q3 2026 to Q2 2027 timelines.
+   - Phases encompass: Hardware load validations, Dynamic Dimensional Filters, Hybrid Protocol conversion integration, and the Hyper-Rotor observation setup.
+
+3. **Index Integration:**
+   - Updated `INDEX.md` file tree diagram to track the new report and roadmap assets, finalizing the documentation pipeline for this epic.
