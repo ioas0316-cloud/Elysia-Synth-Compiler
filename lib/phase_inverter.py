@@ -32,6 +32,12 @@ if os.path.exists(_lib_path):
                     ("phase_x", ctypes.c_double),
                     ("phase_y", ctypes.c_double)]
 
+    class TripleRotorState(ctypes.Structure):
+        _fields_ = [("rotor_a", ctypes.c_double),
+                    ("rotor_b", ctypes.c_double),
+                    ("rotor_c", ctypes.c_double),
+                    ("neutral_y", ctypes.c_double)]
+
     class VolumetricLattice(ctypes.Structure):
         _fields_ = [("core_signature", ctypes.c_uint64),
                     ("phase_angle", ctypes.c_float)]
@@ -53,6 +59,8 @@ if os.path.exists(_lib_path):
     _native.compute_ascii_cuda_resonance.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
     _native.compute_ascii_cuda_resonance.restype = ResonanceTensor
 
+    _native.execute_hybrid_gateway_filter.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_uint64, ctypes.c_double, ctypes.c_double]
+    _native.execute_hybrid_gateway_filter.restype = TripleRotorState
     _native.observe_volume_coherent.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_uint64]
     _native.observe_volume_coherent.restype = VolumetricLattice
 else:
@@ -332,12 +340,22 @@ class PhaseInverterGate:
         """
         기성 논리 통신망(TCP/IP, PyTorch)에서 날아온 하이브리드 패킷을
         수문(CausalityMapBridge)에 밀어넣어 직동 변전시킵니다.
-        [시민권 바이패스] 최전방에서 O(1) 체적 필터링을 수행합니다.
+        [시민권 바이패스 + 델타-와이 결선] 최전방에서 O(1) 체적 필터링과
+        삼중 로터 중성점 노이즈 상쇄를 동시에 수행합니다.
         """
         current_bytes = packet_map_stream.get("payload", b"")
         if _native and len(current_bytes) > 0:
-            lattice = _native.observe_volume_coherent(current_bytes, len(current_bytes), self.system_resonance_key)
-            if lattice.core_signature == 0:
+            # 트래픽 폭증 압력과 노이즈를 가정 (시뮬레이션 용 변수)
+            current_pressure = float(len(current_bytes))
+            noise = packet_map_stream.get("jitter", 0.0)
+
+            state = _native.execute_hybrid_gateway_filter(
+                current_bytes, len(current_bytes), self.system_resonance_key, current_pressure, float(noise)
+            )
+
+            # 델타-와이 중성점 흡수로 인해 노이즈가 과도하거나 시민권이 없으면
+            # state.rotor 값들이 0 에 수렴. (이하 간단히 필터 검증)
+            if state.rotor_a == 0.0 and state.rotor_b == 0.0:
                 # 시민권(위상) 불일치로 자율 폐기 (Ghosting)
                 return b""
 
