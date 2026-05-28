@@ -6,7 +6,7 @@ CXX = g++
 CXXFLAGS = -O3 -shared -fPIC
 
 TARGET = lib/phase_kernel.so
-SRC = src/phase_kernel.cpp
+SRC = legislative/src/continuous_twin_sensing.cpp executive/binding.cpp
 
 all: $(TARGET)
 

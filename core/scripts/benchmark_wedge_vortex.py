@@ -45,6 +45,9 @@ def run_benchmark():
     print(f"[Turing Phase Inverter Mapping] Time: {inverter_time:.6f} sec (Result: {inverter_res})")
 
     # ASCII-CUDA 직동 공명 테스트
+    import sys
+    import os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
     import lib.phase_inverter as pi
     gate = pi.PhaseInverterGate()
     ascii_start = time.perf_counter()
