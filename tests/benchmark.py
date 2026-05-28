@@ -44,6 +44,16 @@ def run_benchmark():
     inverter_time = time.perf_counter() - start
     print(f"[Turing Phase Inverter Mapping] Time: {inverter_time:.6f} sec (Result: {inverter_res})")
 
+    # ASCII-CUDA 직동 공명 테스트
+    import lib.phase_inverter as pi
+    gate = pi.PhaseInverterGate()
+    ascii_start = time.perf_counter()
+    # 대량의 ASCII 문자열 공명
+    test_string = "ElysiaPhaseInverter" * (iterations // 1000)
+    res_tensor = gate.ascii_cuda_resonance.resonate(test_string)
+    ascii_time = time.perf_counter() - ascii_start
+    print(f"[ASCII-CUDA Resonance] Time: {ascii_time:.6f} sec (Amplitude: {res_tensor[0]:.4f})")
+
     # 오버헤드 비교
     ratio = legacy_time / inverter_time if inverter_time > 0 else float('inf')
     print(f"\n=> 튜링 위상 인버터 직동 매핑 속도는 기성 연산 대비 약 {ratio:,.2f}배 빠르며, 런타임 오버헤드가 '0'에 수렴함을 증명합니다.")
